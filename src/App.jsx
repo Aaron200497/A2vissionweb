@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext, createContext } from "react";
 import emailjs from "@emailjs/browser";
-import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
 // ───────────── Simple localStorage auth (demo) ─────────────
 const ADMIN_ACCOUNT = {
@@ -909,16 +909,20 @@ function UserRequests() {
                 onClickStep={(idx) => toggleStepDetails(r.id, idx)}
               />
               {/* Inline details under each step's bubble */}
-              {steps.map((s, idx) => (
-                showDetailsUser[r.id]?.[idx] && r.details && r.details[idx] ? (
+              {steps.map((s, idx) =>
+                showDetailsUser[r.id]?.[idx] ? (
                   <div key={idx} className="mt-2 p-2 bg-slate-50 rounded">
                     <p className="text-sm font-semibold">Detalles de “{s}”</p>
-                    {r.details[idx].message && (
+                    {r.details?.[idx]?.message ? (
                       <p className="text-sm mb-1">
                         <strong>Mensaje admin:</strong> {r.details[idx].message}
                       </p>
+                    ) : (
+                      <p className="text-sm italic text-slate-500">
+                        Sin mensaje para este paso.
+                      </p>
                     )}
-                    {r.details[idx].attachment && (
+                    {r.details?.[idx]?.attachment && (
                       <a
                         href={r.details[idx].attachment}
                         target="_blank"
@@ -930,7 +934,7 @@ function UserRequests() {
                     )}
                   </div>
                 ) : null
-              ))}
+              )}
             </>
           ) : (
             <p className="text-xs text-red-600">Rechazado</p>
