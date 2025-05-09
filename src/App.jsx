@@ -187,7 +187,7 @@ function NavBar() {
     <header className="bg-white shadow">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-2">
-          <img src="img/logo.png" alt="A² Vission" className="h-10 w-10" />
+          <img src="./img/logo.png" alt="A² Vission" className="h-10 w-10" />
           <span className="font-bold text-xl text-sky-600">A² Vission</span>
         </Link>
 
@@ -310,7 +310,7 @@ function Home() {
           </div>
           <div className="flex justify-center md:justify-end">
             <img
-              src="img/tagline.png"
+              src="./img/tagline.png"
               alt="tagline"
               className="max-w-sm md:max-w-md"
             />
