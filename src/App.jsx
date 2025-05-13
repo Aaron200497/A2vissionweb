@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useContext, createContext } from "react";
 impoimport React, { useState, useRef, useEffect, useContext, createContext } from "react";
+import emailjsimport React, { useState, useRef, useEffect, useContext, createContext } from "react";
 import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
@@ -1291,9 +1292,14 @@ function AdminPanel() {
             </p>
             <button
               onClick={() => setShowDetails({ ...showDetails, [r.id]: !showDetails[r.id] })}
-              className="text-sm underline"
+              className="text-sm underline flex items-center"
             >
               {showDetails[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
+              {Object.keys(r.details || {}).length > 0 && (
+                <span className="ml-1 text-blue-600" title="Tienes nuevos mensajes o archivos">
+                  📩
+                </span>
+              )}
             </button>
             <div className={showDetails[r.id] ? '' : 'hidden'}>
               {r.step >= 0 && (
