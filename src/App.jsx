@@ -3,6 +3,9 @@ impoimport React, { useState, useRef, useEffect, useContext, createContext } fro
 import emailjsimport React, { useState, useRef, useEffect, useContext, createContext } from "react";
 import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
+import React, { useState, useRef, useEffect, useContext, createContext } from "react";
+import emailjs from "@emailjs/browser";
+import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
 // ───────────── Simple localStorage auth (demo) ─────────────
 const ADMIN_ACCOUNT = {
@@ -915,6 +918,7 @@ function ProgressLine({ step, onClickStep }) {
 function UserRequests() {
   const reqs = loadRequests();
   const [showDetailsUser, setShowDetailsUser] = useState({});
+  const [userReplyMap, setUserReplyMap] = useState({});
 
   // Toggle logic for step details
   const toggleStepDetails = (id, idx) => {
@@ -931,6 +935,23 @@ function UserRequests() {
     const list = loadRequests().filter(r => r.id !== id);
     saveRequests(list);
     window.location.reload();
+  };
+
+  // Helper to save user reply per step
+  const saveUserReply = (id, idx) => {
+    const list = loadRequests().map(r => {
+      if (r.id === id) {
+        const details = { ...(r.details || {}) };
+        details[idx] = {
+          ...details[idx],
+          userReply: userReplyMap[id]?.[idx] || ""
+        };
+        return { ...r, details };
+      }
+      return r;
+    });
+    saveRequests(list);
+    alert("Respuesta guardada");
   };
 
   return (
@@ -953,6 +974,18 @@ function UserRequests() {
                 step={r.step}
                 onClickStep={(idx) => toggleStepDetails(r.id, idx)}
               />
+              {/* Toggle details button with icon if there are admin messages/attachments */}
+              <button
+                onClick={() => setShowDetailsUser({ ...showDetailsUser, [r.id]: !showDetailsUser[r.id] })}
+                className="text-sm underline flex items-center mt-2"
+              >
+                {showDetailsUser[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
+                {Object.keys(r.details || {}).length > 0 && (
+                  <span className="ml-1 text-blue-600" title="Tienes nuevos mensajes o archivos">
+                    📩
+                  </span>
+                )}
+              </button>
               {/* Inline details under each step's bubble */}
               {steps.map((s, idx) =>
                 showDetailsUser[r.id]?.[idx] ? (
@@ -967,6 +1000,7 @@ function UserRequests() {
                         Sin mensaje para este paso.
                       </p>
                     )}
+                    {/* Download attachment already present */}
                     {r.details?.[idx]?.attachment && (
                       <a
                         href={r.details[idx].attachment}
@@ -974,9 +1008,25 @@ function UserRequests() {
                         rel="noopener noreferrer"
                         className="text-sm text-sky-600 hover:underline"
                       >
-                        Ver archivo adjunto
+                        Descargar archivo
                       </a>
                     )}
+                    {/* User reply textarea and button */}
+                    <textarea
+                      value={userReplyMap[r.id]?.[idx] || r.details[idx]?.userReply || ""}
+                      onChange={e => setUserReplyMap(prev => ({
+                        ...prev,
+                        [r.id]: { ...(prev[r.id] || {}), [idx]: e.target.value }
+                      }))}
+                      placeholder="Escribe tu respuesta"
+                      className="w-full border rounded p-2 text-sm mt-2"
+                    />
+                    <button
+                      onClick={() => saveUserReply(r.id, idx)}
+                      className="mt-1 text-sm bg-green-600 text-white px-2 py-1 rounded"
+                    >
+                      Guardar respuesta
+                    </button>
                   </div>
                 ) : null
               )}
