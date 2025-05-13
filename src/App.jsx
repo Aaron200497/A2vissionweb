@@ -2,10 +2,6 @@ import React, { useState, useRef, useEffect, useContext, createContext } from "r
 import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
-// ────────────import React, { useState, useRef, useEffect, useContext, createContext } from "react";
-import emailjs from "@emailjs/browser";
-import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
-
 // ───────────── Simple localStorage auth (demo) ─────────────
 const ADMIN_ACCOUNT = {
   email: "website@a2vission.com",
@@ -197,6 +193,7 @@ export default function App() {
               <Route path="/contacto" element={<Contact />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/planes/:slug" element={<PlanDetail />} />
               <Route path="/solicitar/:slug" element={<RequestForm />} />
               <Route path="/admin" element={<AdminPanel />} />
               {/* Legal routes */}
@@ -317,7 +314,7 @@ function PaymentCard({ plan }) {
       <p className="text-2xl font-bold text-sky-600 mb-2">{plan.price}</p>
       <p className="text-sm text-slate-600 flex-1">{plan.details}</p>
       <Link
-        to={`/solicitar/${plan.slug}`}
+        to={`/planes/${plan.slug}`}
         className="mt-4 py-2 bg-sky-600 text-white rounded-md text-center hover:bg-sky-700"
       >
         Solicitar aquí
@@ -1341,6 +1338,65 @@ function AdminPanel() {
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+/*──────────────────────────
+  Plan Detail
+──────────────────────────*/
+function PlanDetail() {
+  const { user } = useAuth();
+  const { slug } = useParams();
+  const plan = ALL_PLANS.find(p => p.slug === slug);
+  const storageKey = `plan_cond_${slug}`;
+  const [conditions, setConditions] = useState(
+    localStorage.getItem(storageKey) || (plan && plan.details)
+  );
+  const isAdmin = user?.role === 'admin';
+
+  const saveConditions = () => {
+    localStorage.setItem(storageKey, conditions);
+    alert('Condiciones guardadas');
+  };
+
+  if (!plan) {
+    return (
+      <section className="container mx-auto px-4 py-16 text-center">
+        <p className="text-lg">Plan no encontrado.</p>
+        <Link to="/planes" className="text-sky-600 hover:underline">Volver a planes</Link>
+      </section>
+    );
+  }
+
+  return (
+    <section className="container mx-auto px-4 py-16 max-w-xl space-y-6">
+      <h2 className="text-2xl font-bold">{plan.name}</h2>
+      <p className="text-xl text-sky-600">{plan.price}</p>
+      <label className="block text-sm font-medium">Condiciones:</label>
+      {isAdmin ? (
+        <textarea
+          className="w-full border rounded p-2"
+          rows={4}
+          value={conditions}
+          onChange={e => setConditions(e.target.value)}
+        />
+      ) : (
+        <p className="text-sm text-slate-700 whitespace-pre-line">{conditions}</p>
+      )}
+      {isAdmin && (
+        <button
+          onClick={saveConditions}
+          className="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+        >
+          Guardar condiciones
+        </button>
+      )}
+      <Link
+        to={`/solicitar/${slug}`}
+        className="block mt-4 py-2 bg-sky-600 text-white text-center rounded hover:bg-sky-700"
+      >
+        Solicitar este plan
+      </Link>
     </section>
   );
 }
