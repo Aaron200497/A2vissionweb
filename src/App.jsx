@@ -139,6 +139,12 @@ function loadRequests() {
 function saveRequests(list) {
   localStorage.setItem("requests", JSON.stringify(list));
 }
+function loadSubscriptions() {
+  return JSON.parse(localStorage.getItem("subscriptions") || "[]");
+}
+function saveSubscriptions(list) {
+  localStorage.setItem("subscriptions", JSON.stringify(list));
+}
 
 const RECOMMENDED = [APP_PLANS[0], WEB_PLANS[0]];
 
@@ -215,6 +221,14 @@ function NavBar() {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const [userOpen, setUserOpen] = useState(false);
+  // Red dot for unread user requests (only for normal user)
+  const [hasUnread, setHasUnread] = useState(false);
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      const reqs = loadRequests();
+      setHasUnread(reqs.some(r => r.unread));
+    }
+  }, [user]);
 
   return (
     <header className="bg-white shadow">
@@ -239,7 +253,12 @@ function NavBar() {
                 <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow">
                   <Link to="/profile" className="block px-4 py-2 text-sm hover:bg-slate-50">Mi perfil</Link>
                   <Link to="/suscripciones" className="block px-4 py-2 text-sm hover:bg-slate-50">Suscripciones</Link>
-                  <Link to="/mis-solicitudes" className="block px-4 py-2 text-sm hover:bg-slate-50">Solicitudes</Link>
+                  <Link to="/mis-solicitudes" className="block px-4 py-2 text-sm hover:bg-slate-50 flex items-center">
+                    Solicitudes
+                    {hasUnread && (
+                      <span className="inline-block w-2 h-2 bg-red-600 rounded-full ml-2" />
+                    )}
+                  </Link>
                   <button onClick={logout} className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Cerrar sesión</button>
                 </div>
               )}
@@ -273,6 +292,14 @@ function NavBar() {
           )}
           {!user && (
             <MobileLink to="/login" onClick={() => setOpen(false)}>Inicio de sesión</MobileLink>
+          )}
+          {user && (
+            <MobileLink to="/mis-solicitudes" onClick={() => setOpen(false)}>
+              Solicitudes
+              {user.role !== "admin" && hasUnread && (
+                <span className="inline-block w-2 h-2 bg-red-600 rounded-full ml-2" />
+              )}
+            </MobileLink>
           )}
           {user && (
             <button
@@ -911,7 +938,7 @@ function ProgressLine({ step, onClickStep }) {
 }
 
 function UserRequests() {
-  const reqs = loadRequests();
+  const [reqs, setReqs] = useState(loadRequests());
   const [showDetailsUser, setShowDetailsUser] = useState({});
   const [userReplyMap, setUserReplyMap] = useState({});
 
@@ -924,6 +951,20 @@ function UserRequests() {
         [idx]: !prev[id]?.[idx],
       }
     }));
+    // If unread, mark as read and persist
+    let reqList = loadRequests();
+    let changed = false;
+    reqList = reqList.map(r => {
+      if (r.id === id && r.unread) {
+        changed = true;
+        return { ...r, unread: false };
+      }
+      return r;
+    });
+    if (changed) {
+      saveRequests(reqList);
+      setReqs(reqList);
+    }
   };
 
   const removeUserRequest = (id) => {
@@ -949,6 +990,12 @@ function UserRequests() {
     alert("Respuesta guardada");
   };
 
+  useEffect(() => {
+    // Listen for updates (e.g., from admin panel)
+    const int = setInterval(() => setReqs(loadRequests()), 1000);
+    return () => clearInterval(int);
+  }, []);
+
   return (
     <section className="container mx-auto px-4 py-16 space-y-6">
       <h2 className="text-3xl font-bold text-center">Mis solicitudes</h2>
@@ -959,9 +1006,15 @@ function UserRequests() {
 
       {reqs.map((r) => (
         <div key={r.id} className="border rounded p-4">
-          <h4 className="font-semibold">
-            {ALL_PLANS.find((p) => p.slug === r.plan)?.name}
-          </h4>
+          <div className="flex items-center">
+            <h4 className="font-semibold">
+              {ALL_PLANS.find((p) => p.slug === r.plan)?.name}
+            </h4>
+            {/* Red dot if unread */}
+            {r.unread && (
+              <span className="inline-block w-2 h-2 bg-red-600 rounded-full ml-2" />
+            )}
+          </div>
           {r.step >= 0 ? (
             <>
               <p className="text-xs text-slate-500">{steps[r.step]}</p>
@@ -969,20 +1022,6 @@ function UserRequests() {
                 step={r.step}
                 onClickStep={(idx) => toggleStepDetails(r.id, idx)}
               />
-              {/* Toggle details button with icon if there are admin messages/attachments */}
-              <button
-                onClick={() =>
-                  setShowDetailsUser({ ...showDetailsUser, [r.id]: !showDetailsUser[r.id] })
-                }
-                className="text-sm underline flex items-center mt-2"
-              >
-                {showDetailsUser[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
-                {Object.keys(r.details || {}).length > 0 && !showDetailsUser[r.id] && (
-                  <span className="ml-1 text-blue-600" title="Tienes nuevos mensajes o archivos">
-                    🔔
-                  </span>
-                )}
-              </button>
               {/* Inline details under each step's bubble */}
               {steps.map((s, idx) =>
                 showDetailsUser[r.id]?.[idx] ? (
@@ -1011,6 +1050,7 @@ function UserRequests() {
                   </div>
                 ) : null
               )}
+              {/* Remove "Ver detalles" button with bell icon */}
             </>
           ) : (
             <p className="text-xs text-red-600">Rechazado</p>
@@ -1156,6 +1196,9 @@ function AdminPanel() {
   const [msgMap, setMsgMap] = useState({});
   const [fileMap, setFileMap] = useState({});
   const [showDetails, setShowDetails] = useState({});
+  // Subscription assignment state
+  const [subEmail, setSubEmail] = useState('');
+  const [subPlan, setSubPlan] = useState(APP_PLANS[0].slug);
 
   // recargar cada vez que vuelvo a la vista
   React.useEffect(() => {
@@ -1171,6 +1214,7 @@ function AdminPanel() {
   const setMsg = (id, txt) => setMsgMap({ ...msgMap, [id]: txt });
   const setFile = (id, data) => setFileMap({ ...fileMap, [id]: data });
 
+  // When admin advances step and sends a message, set unread=true on this request
   const advanceStep = (id) => {
     const currentMsg  = msgMap[id] || "";
     const currentFile = fileMap[id] || "";
@@ -1182,10 +1226,14 @@ function AdminPanel() {
           message: currentMsg,
           attachment: currentFile,
         };
+        // If admin sends a message, mark as unread for user
+        let unreadFlag = r.unread;
+        if (currentMsg && currentMsg.trim() !== "") unreadFlag = true;
         return {
           ...r,
           step: newStep,
           details,
+          unread: unreadFlag,
         };
       }
       return r;
@@ -1208,7 +1256,10 @@ function AdminPanel() {
           message: msgMap[id] || "",
           attachment: fileMap[id] || null,
         };
-        return { ...r, step: -1, details };
+        // If admin sends a message, mark as unread for user
+        let unreadFlag = r.unread;
+        if ((msgMap[id] || "").trim() !== "") unreadFlag = true;
+        return { ...r, step: -1, details, unread: unreadFlag };
       }
       return r;
     });
@@ -1225,6 +1276,25 @@ function AdminPanel() {
     saveUsers(users);
     alert("Usuario marcado como administrador (localStorage).");
     setEmailAdmin("");
+  };
+
+  // Assign subscription form handler
+  const assignSubscription = () => {
+    if (!subEmail || !subPlan) {
+      alert("Completa todos los campos.");
+      return;
+    }
+    const subs = loadSubscriptions();
+    subs.push({
+      id: Date.now().toString(),
+      email: subEmail,
+      plan: subPlan,
+      start: new Date().toISOString(),
+    });
+    saveSubscriptions(subs);
+    alert("Suscripción asignada.");
+    setSubEmail('');
+    setSubPlan(APP_PLANS[0].slug);
   };
 
   if (!isAdmin) {
@@ -1258,6 +1328,28 @@ function AdminPanel() {
           >
             Añadir
           </button>
+        </div>
+      </div>
+
+      {/* Asignar suscripción */}
+      <div className="border rounded p-4 space-y-2">
+        <h3 className="font-semibold">Asignar suscripción a usuario</h3>
+        <div className="flex space-x-2">
+          <input
+            type="email"
+            placeholder="Email del usuario"
+            value={subEmail}
+            onChange={e => setSubEmail(e.target.value)}
+            className="flex-1 border rounded p-2"
+          />
+          <select
+            value={subPlan}
+            onChange={e => setSubPlan(e.target.value)}
+            className="border rounded p-2"
+          >
+            {ALL_PLANS.map(p => <option key={p.slug} value={p.slug}>{p.name}</option>)}
+          </select>
+          <button onClick={assignSubscription} className="bg-sky-600 text-white px-4 rounded">Asignar</button>
         </div>
       </div>
 
