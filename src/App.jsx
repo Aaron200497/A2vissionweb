@@ -3,6 +3,11 @@ import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
 // ───────────── Simple localStorage auth (demo) ─────────────
+const ADMIN_ACCOUNTimport React, { useState, useRef, useEffect, useContext, createContext } from "react";
+import emailjs from "@emailjs/browser";
+import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from "react-router-dom";
+
+// ───────────── Simple localStorage auth (demo) ─────────────
 const ADMIN_ACCOUNT = {
   email: "website@a2vission.com",
   password: "AA324/7bobita",
@@ -220,6 +225,7 @@ export default function App() {
 function NavBar() {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
+  const location = useLocation();
   const [userOpen, setUserOpen] = useState(false);
   // Red dot for unread user requests (only for normal user)
   const [hasUnread, setHasUnread] = useState(false);
@@ -230,6 +236,14 @@ function NavBar() {
       setHasUnread(reqs.some(r => r.unread));
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && user.role !== "admin" && location.pathname === "/mis-solicitudes") {
+      const cleared = loadRequests().map(r => ({ ...r, unread: false }));
+      saveRequests(cleared);
+      setHasUnread(false);
+    }
+  }, [location.pathname, user]);
 
   return (
     <header className="bg-white shadow">
@@ -254,12 +268,19 @@ function NavBar() {
                 <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow">
                   <Link to="/profile" className="block px-4 py-2 text-sm hover:bg-slate-50">Mi perfil</Link>
                   <Link to="/suscripciones" className="block px-4 py-2 text-sm hover:bg-slate-50">Suscripciones</Link>
-                  <Link to="/mis-solicitudes" className="block px-4 py-2 text-sm hover:bg-slate-50 flex items-center">
-                    Solicitudes
-                    {hasUnread && (
-                      <span className="inline-block w-2 h-2 bg-red-600 rounded-full ml-2" />
-                    )}
-                  </Link>
+                  <Link
+  to="/mis-solicitudes"
+  className="block px-4 py-2 text-sm hover:bg-slate-50 flex items-center"
+  onClick={() => {
+    const reqs = (JSON.parse(localStorage.getItem("requests") || "[]"))
+      .map(r => ({ ...r, unread: false }));
+    localStorage.setItem("requests", JSON.stringify(reqs));
+    setHasUnread(false);
+  }}
+>
+  Solicitudes
+  {hasUnread && <span className="inline-block w-2 h-2 bg-red-600 rounded-full ml-2" />}
+</Link>
                   <button onClick={() => { logout(); navigate("/"); }} className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Cerrar sesión</button>
                 </div>
               )}
@@ -1072,21 +1093,60 @@ function UserRequests() {
 }
   
 function UserSubscriptions() {
-  const subs = loadSubscriptions();
+  const [subs, setSubs] = useState(loadSubscriptions());
   return (
     <section className="container mx-auto px-4 py-16 space-y-6">
       <h2 className="text-3xl font-bold text-center">Mis suscripciones</h2>
       {subs.length === 0 && <p className="text-center text-slate-500">No tienes suscripciones activas.</p>}
-      {subs.map(s => (
-        <div key={s.id} className="border rounded p-4">
-          <h4 className="font-semibold">{ALL_PLANS.find(p => p.slug === s.plan)?.name}</h4>
-          <p className="text-sm text-slate-600">
-            {/* Estado actual: {steps[s.step]} */}
-            Asignada el: {s.start ? new Date(s.start).toLocaleDateString() : ""}
-          </p>
-          <p className="text-sm text-slate-600">Usuario: {s.email}</p>
-        </div>
-      ))}
+      {subs.map(s => {
+        const plan = ALL_PLANS.find(p => p.slug === s.plan) || {};
+        const start = new Date(s.start);
+        const permanence = /6 meses/i.test(plan.details) ? 6 : 0;
+        const endPerm = new Date(start);
+        endPerm.setMonth(start.getMonth() + permanence);
+
+        // próxima renovación cada mes tras el inicio
+        const monthsFromStart = Math.floor((Date.now() - start) / (30 * 24 * 3600 * 1000));
+        const nextRenewal = new Date(start);
+        nextRenewal.setMonth(start.getMonth() + monthsFromStart + 1);
+
+        const canCancel = !s.canceled && (permanence === 0 || Date.now() >= endPerm);
+
+        const doCancel = () => {
+          const list = subs.map(x =>
+            x.id === s.id ? { ...x, canceled: true, keepUntil: nextRenewal.toISOString() } : x
+          );
+          saveSubscriptions(list);
+          setSubs(list);
+        };
+
+        return (
+          <div key={s.id} className="border rounded p-4 space-y-1">
+            <h4 className="font-semibold">{plan.name} – {plan.price}</h4>
+            <p className="text-sm">Inicio: {start.toLocaleDateString()}</p>
+            {permanence > 0 && (
+              <p className="text-sm">Fin permanencia: {endPerm.toLocaleDateString()}</p>
+            )}
+            <p className="text-sm">Próxima renovación: {nextRenewal.toLocaleDateString()}</p>
+
+            {!s.canceled ? (
+              <button
+                onClick={doCancel}
+                disabled={!canCancel}
+                className={`mt-2 py-1 px-4 rounded ${
+                  canCancel ? "bg-red-600 text-white" : "bg-slate-300 text-slate-500 cursor-not-allowed"
+                }`}
+              >
+                Cancelar suscripción
+              </button>
+            ) : (
+              <p className="text-xs text-slate-500">
+                Activa hasta el {new Date(s.keepUntil).toLocaleDateString()}.
+              </p>
+            )}
+          </div>
+        );
+      })}
     </section>
   );
 }
@@ -1110,6 +1170,7 @@ function Footer() {
               +34 666 876 120
             </a>
           </p>
+          <p className="text-slate-300 text-sm">Horario: 09:00 – 18:00</p>
         </div>
 
         <LegalLinks />
