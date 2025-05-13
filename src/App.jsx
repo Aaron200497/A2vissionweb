@@ -45,9 +45,11 @@ function AuthProvider({ children }) {
     localStorage.setItem("currentUser", JSON.stringify(u));
     setUser(u);
   };
+  const navigate = useNavigate();
   const logout = () => {
     localStorage.removeItem("currentUser");
     setUser(null);
+    navigate("/");
   };
 
   return (
@@ -1070,21 +1072,25 @@ function UserRequests() {
   );
 }
   
-  function UserSubscriptions() {
-    const subs = loadRequests().filter(r => r.step >= 4);
-    return (
-      <section className="container mx-auto px-4 py-16 space-y-6">
-        <h2 className="text-3xl font-bold text-center">Mis suscripciones</h2>
-        {subs.length === 0 && <p className="text-center text-slate-500">No tienes suscripciones activas.</p>}
-        {subs.map(s => (
-          <div key={s.id} className="border rounded p-4">
-            <h4 className="font-semibold">{ALL_PLANS.find(p => p.slug === s.plan)?.name}</h4>
-            <p className="text-sm text-slate-600">Estado actual: {steps[s.step]}</p>
-          </div>
-        ))}
-      </section>
-    );
-  }
+function UserSubscriptions() {
+  const subs = loadSubscriptions();
+  return (
+    <section className="container mx-auto px-4 py-16 space-y-6">
+      <h2 className="text-3xl font-bold text-center">Mis suscripciones</h2>
+      {subs.length === 0 && <p className="text-center text-slate-500">No tienes suscripciones activas.</p>}
+      {subs.map(s => (
+        <div key={s.id} className="border rounded p-4">
+          <h4 className="font-semibold">{ALL_PLANS.find(p => p.slug === s.plan)?.name}</h4>
+          <p className="text-sm text-slate-600">
+            {/* Estado actual: {steps[s.step]} */}
+            Asignada el: {s.start ? new Date(s.start).toLocaleDateString() : ""}
+          </p>
+          <p className="text-sm text-slate-600">Usuario: {s.email}</p>
+        </div>
+      ))}
+    </section>
+  );
+}
 function Footer() {
   return (
     <footer className="bg-slate-900 text-slate-300 text-sm py-8 mt-16">
@@ -1192,6 +1198,7 @@ function AdminPanel() {
   const { user } = useAuth();
   const isAdmin = user && user.role === "admin";
   const [reqs, setReqs] = useState(loadRequests());
+  const [view, setView] = useState('requests');
   const [emailAdmin, setEmailAdmin] = useState("");
   const [msgMap, setMsgMap] = useState({});
   const [fileMap, setFileMap] = useState({});
@@ -1305,160 +1312,232 @@ function AdminPanel() {
     );
   }
 
+  // Sidebar component
+  function Sidebar() {
+    return (
+      <aside className="w-64 border-r p-4">
+        <nav className="space-y-2">
+          <button onClick={() => setView('requests')} className="block w-full text-left">Solicitudes</button>
+          <button onClick={() => setView('subscriptions')} className="block w-full text-left">Suscripciones</button>
+          <button onClick={() => setView('users')} className="block w-full text-left">Usuarios</button>
+        </nav>
+      </aside>
+    );
+  }
+
+  // Requests panel
+  function RequestsPanel() {
+    return (
+      <div className="space-y-8">
+        {/* Añadir admin */}
+        <div className="border rounded p-4 space-y-2">
+          <h3 className="font-semibold">Añadir usuario admin</h3>
+          <div className="flex space-x-2">
+            <input
+              type="email"
+              value={emailAdmin}
+              onChange={(e) => setEmailAdmin(e.target.value)}
+              placeholder="correo@ejemplo.com"
+              className="flex-1 border rounded p-2"
+            />
+            <button
+              className="bg-sky-600 text-white px-4 rounded"
+              onClick={makeAdmin}
+            >
+              Añadir
+            </button>
+          </div>
+        </div>
+
+        {/* Asignar suscripción */}
+        <div className="border rounded p-4 space-y-2">
+          <h3 className="font-semibold">Asignar suscripción a usuario</h3>
+          <div className="flex space-x-2">
+            <input
+              type="email"
+              placeholder="Email del usuario"
+              value={subEmail}
+              onChange={e => setSubEmail(e.target.value)}
+              className="flex-1 border rounded p-2"
+            />
+            <select
+              value={subPlan}
+              onChange={e => setSubPlan(e.target.value)}
+              className="border rounded p-2"
+            >
+              {ALL_PLANS.map(p => <option key={p.slug} value={p.slug}>{p.name}</option>)}
+            </select>
+            <button onClick={assignSubscription} className="bg-sky-600 text-white px-4 rounded">Asignar</button>
+          </div>
+        </div>
+
+        {/* Solicitudes */}
+        <div className="space-y-4">
+          <h3 className="font-semibold">Solicitudes</h3>
+          {reqs.length === 0 && (
+            <p className="text-slate-500 text-sm">No hay solicitudes.</p>
+          )}
+          {reqs
+            .map((r) => (
+            <div key={r.id} className="border rounded p-4 space-y-2">
+              <div className="flex justify-between items-center">
+                <span>
+                  {ALL_PLANS.find((p) => p.slug === r.plan)?.name} —{" "}
+                  {r.step >= 0
+                    ? `paso ${r.step + 1}/${steps.length}`
+                    : "Rechazado"}
+                </span>
+                <div className="space-x-2">
+                  {r.step >= 0 && r.step < steps.length - 1 && (
+                    <button
+                      onClick={() => advanceStep(r.id)}
+                      className="text-sm bg-sky-600 text-white px-2 py-1 rounded"
+                    >
+                      Avanzar
+                    </button>
+                  )}
+                  {r.step === steps.length - 1 && (
+                    <button
+                      onClick={() => removeRequest(r.id)}
+                      className="text-sm bg-green-600 text-white px-2 py-1 rounded"
+                    >
+                      Finalizar
+                    </button>
+                  )}
+                  {r.step >= 0 && (
+                    <button
+                      onClick={() => reject(r.id)}
+                      className="text-sm bg-red-600 text-white px-2 py-1 rounded"
+                    >
+                      Rechazar
+                    </button>
+                  )}
+                  {r.step === -1 && (
+                    <button
+                      onClick={() => removeRequest(r.id)}
+                      className="text-sm bg-slate-500 text-white px-2 py-1 rounded"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-slate-600">
+                {r.step >= 0 ? steps[r.step] : "Rechazado"}
+              </p>
+              <p className="text-xs">
+                Nº solicitud: <strong>{r.ticket}</strong><br/>
+                Email: {r.userEmail} — Tel: {r.phone}<br/>
+                {r.name} {r.lastname}<br/>
+                {r.message}
+              </p>
+              <button
+                onClick={() => setShowDetails({ ...showDetails, [r.id]: !showDetails[r.id] })}
+                className="text-sm underline flex items-center"
+              >
+                {showDetails[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
+                {Object.keys(r.details || {}).length > 0 && (
+                  <span className="ml-1 text-blue-600" title="Tienes nuevos mensajes o archivos">
+                    📩
+                  </span>
+                )}
+              </button>
+              <div className={showDetails[r.id] ? '' : 'hidden'}>
+                {r.step >= 0 && (
+                  <>
+                    <textarea
+                      value={msgMap[r.id] || ""}
+                      onChange={(e) => setMsg(r.id, e.target.value)}
+                      placeholder="Mensaje opcional al usuario"
+                      className="w-full border rounded p-2 text-sm"
+                    />
+                    <button
+                      onClick={() => advanceStep(r.id)}
+                      className="mt-2 text-sm bg-blue-600 text-white px-2 py-1 rounded"
+                    >
+                      Guardar y enviar
+                    </button>
+                  </>
+                )}
+                {(r.step !== 1 && r.step !== 2) && (
+                  <input
+                    type="file"
+                    accept="*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setFile(r.id, ev.target.result);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="text-sm"
+                  />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Users panel
+  function UsersPanel() {
+    const users = loadUsers();
+    const deleteUser = (email) => {
+      const filtered = users.filter(u => u.email !== email);
+      saveUsers(filtered);
+      alert('Usuario eliminado');
+      setReqs(loadRequests()); // trigger re-render
+    };
+    return (
+      <div>
+        <h3 className="font-semibold">Usuarios registrados</h3>
+        {users.map(u => (
+          <div key={u.email} className="flex justify-between py-1">
+            <span>{u.email} ({u.role})</span>
+            <button onClick={() => deleteUser(u.email)} className="text-red-600">Eliminar</button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Subscriptions panel
+  function SubscriptionsPanel() {
+    const subs = loadSubscriptions();
+    const removeSub = (id) => {
+      const list = subs.filter(s => s.id !== id);
+      saveSubscriptions(list);
+      alert('Suscripción eliminada');
+      setReqs(loadRequests());
+    };
+    return (
+      <div>
+        <h3 className="font-semibold">Suscripciones asignadas</h3>
+        {subs.map(s => (
+          <div key={s.id} className="flex justify-between py-1">
+            <span>{s.email} — {ALL_PLANS.find(p => p.slug === s.plan)?.name}</span>
+            <button onClick={() => removeSub(s.id)} className="text-red-600">Eliminar</button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <section className="container mx-auto px-4 py-16 space-y-8">
       <h2 className="text-3xl font-bold text-center mb-6">
         Panel de administración
       </h2>
-
-      {/* Añadir admin */}
-      <div className="border rounded p-4 space-y-2">
-        <h3 className="font-semibold">Añadir usuario admin</h3>
-        <div className="flex space-x-2">
-          <input
-            type="email"
-            value={emailAdmin}
-            onChange={(e) => setEmailAdmin(e.target.value)}
-            placeholder="correo@ejemplo.com"
-            className="flex-1 border rounded p-2"
-          />
-          <button
-            className="bg-sky-600 text-white px-4 rounded"
-            onClick={makeAdmin}
-          >
-            Añadir
-          </button>
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1 px-4">
+          {view === 'requests' && <RequestsPanel />}
+          {view === 'subscriptions' && <SubscriptionsPanel />}
+          {view === 'users' && <UsersPanel />}
         </div>
-      </div>
-
-      {/* Asignar suscripción */}
-      <div className="border rounded p-4 space-y-2">
-        <h3 className="font-semibold">Asignar suscripción a usuario</h3>
-        <div className="flex space-x-2">
-          <input
-            type="email"
-            placeholder="Email del usuario"
-            value={subEmail}
-            onChange={e => setSubEmail(e.target.value)}
-            className="flex-1 border rounded p-2"
-          />
-          <select
-            value={subPlan}
-            onChange={e => setSubPlan(e.target.value)}
-            className="border rounded p-2"
-          >
-            {ALL_PLANS.map(p => <option key={p.slug} value={p.slug}>{p.name}</option>)}
-          </select>
-          <button onClick={assignSubscription} className="bg-sky-600 text-white px-4 rounded">Asignar</button>
-        </div>
-      </div>
-
-      {/* Solicitudes */}
-      <div className="space-y-4">
-        <h3 className="font-semibold">Solicitudes</h3>
-        {reqs.length === 0 && (
-          <p className="text-slate-500 text-sm">No hay solicitudes.</p>
-        )}
-        {reqs
-          .map((r) => (
-          <div key={r.id} className="border rounded p-4 space-y-2">
-            <div className="flex justify-between items-center">
-              <span>
-                {ALL_PLANS.find((p) => p.slug === r.plan)?.name} —{" "}
-                {r.step >= 0
-                  ? `paso ${r.step + 1}/${steps.length}`
-                  : "Rechazado"}
-              </span>
-              <div className="space-x-2">
-  {r.step >= 0 && r.step < steps.length - 1 && (
-    <button
-      onClick={() => advanceStep(r.id)}
-      className="text-sm bg-sky-600 text-white px-2 py-1 rounded"
-    >
-      Avanzar
-    </button>
-  )}
-  {r.step === steps.length - 1 && (
-    <button
-      onClick={() => removeRequest(r.id)}
-      className="text-sm bg-green-600 text-white px-2 py-1 rounded"
-    >
-      Finalizar
-    </button>
-  )}
-  {r.step >= 0 && (
-    <button
-      onClick={() => reject(r.id)}
-      className="text-sm bg-red-600 text-white px-2 py-1 rounded"
-    >
-      Rechazar
-    </button>
-  )}
-  {r.step === -1 && (
-    <button
-      onClick={() => removeRequest(r.id)}
-      className="text-sm bg-slate-500 text-white px-2 py-1 rounded"
-    >
-      Eliminar
-    </button>
-  )}
-</div>
-            </div>
-            <p className="text-xs text-slate-600">
-              {r.step >= 0 ? steps[r.step] : "Rechazado"}
-            </p>
-            <p className="text-xs">
-              Nº solicitud: <strong>{r.ticket}</strong><br/>
-              Email: {r.userEmail} — Tel: {r.phone}<br/>
-              {r.name} {r.lastname}<br/>
-              {r.message}
-            </p>
-            <button
-              onClick={() => setShowDetails({ ...showDetails, [r.id]: !showDetails[r.id] })}
-              className="text-sm underline flex items-center"
-            >
-              {showDetails[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
-              {Object.keys(r.details || {}).length > 0 && (
-                <span className="ml-1 text-blue-600" title="Tienes nuevos mensajes o archivos">
-                  📩
-                </span>
-              )}
-            </button>
-            <div className={showDetails[r.id] ? '' : 'hidden'}>
-              {r.step >= 0 && (
-                <>
-                  <textarea
-                    value={msgMap[r.id] || ""}
-                    onChange={(e) => setMsg(r.id, e.target.value)}
-                    placeholder="Mensaje opcional al usuario"
-                    className="w-full border rounded p-2 text-sm"
-                  />
-                  <button
-                    onClick={() => advanceStep(r.id)}
-                    className="mt-2 text-sm bg-blue-600 text-white px-2 py-1 rounded"
-                  >
-                    Guardar y enviar
-                  </button>
-                </>
-              )}
-              {(r.step !== 1 && r.step !== 2) && (
-                <input
-                  type="file"
-                  accept="*"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => setFile(r.id, ev.target.result);
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="text-sm"
-                />
-              )}
-            </div>
-          </div>
-        ))}
       </div>
     </section>
   );
