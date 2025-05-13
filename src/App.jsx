@@ -1,9 +1,4 @@
 import React, { useState, useRef, useEffect, useContext, createContext } from "react";
-impoimport React, { useState, useRef, useEffect, useContext, createContext } from "react";
-import emailjsimport React, { useState, useRef, useEffect, useContext, createContext } from "react";
-import emailjs from "@emailjs/browser";
-import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
-import React, { useState, useRef, useEffect, useContext, createContext } from "react";
 import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
@@ -976,13 +971,15 @@ function UserRequests() {
               />
               {/* Toggle details button with icon if there are admin messages/attachments */}
               <button
-                onClick={() => setShowDetailsUser({ ...showDetailsUser, [r.id]: !showDetailsUser[r.id] })}
+                onClick={() =>
+                  setShowDetailsUser({ ...showDetailsUser, [r.id]: !showDetailsUser[r.id] })
+                }
                 className="text-sm underline flex items-center mt-2"
               >
                 {showDetailsUser[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
-                {Object.keys(r.details || {}).length > 0 && (
+                {Object.keys(r.details || {}).length > 0 && !showDetailsUser[r.id] && (
                   <span className="ml-1 text-blue-600" title="Tienes nuevos mensajes o archivos">
-                    📩
+                    🔔
                   </span>
                 )}
               </button>
@@ -1011,22 +1008,6 @@ function UserRequests() {
                         Descargar archivo
                       </a>
                     )}
-                    {/* User reply textarea and button */}
-                    <textarea
-                      value={userReplyMap[r.id]?.[idx] || r.details[idx]?.userReply || ""}
-                      onChange={e => setUserReplyMap(prev => ({
-                        ...prev,
-                        [r.id]: { ...(prev[r.id] || {}), [idx]: e.target.value }
-                      }))}
-                      placeholder="Escribe tu respuesta"
-                      className="w-full border rounded p-2 text-sm mt-2"
-                    />
-                    <button
-                      onClick={() => saveUserReply(r.id, idx)}
-                      className="mt-1 text-sm bg-green-600 text-white px-2 py-1 rounded"
-                    >
-                      Guardar respuesta
-                    </button>
                   </div>
                 ) : null
               )}
@@ -1368,25 +1349,10 @@ function AdminPanel() {
                   </button>
                 </>
               )}
-              {r.step === 1 && (
+              {(r.step !== 1 && r.step !== 2) && (
                 <input
                   type="file"
-                  accept="application/pdf"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => setFile(r.id, ev.target.result);
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="text-sm"
-                />
-              )}
-              {r.step === 5 && (
-                <input
-                  type="file"
-                  accept="image/*"
+                  accept="*"
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
