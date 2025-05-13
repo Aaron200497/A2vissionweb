@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, createContext } from "react";
 import emailjs from "@emailjs/browser";
-import RequestForm from '@/RequestForm'
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
 // ───────────── Simple localStorage auth (demo) ─────────────
@@ -146,6 +145,36 @@ const RECOMMENDED = [APP_PLANS[0], WEB_PLANS[0]];
 /*──────────────────────────
   Root
 ──────────────────────────*/
+function LegalTerms() {
+  return (
+    <section className="container mx-auto px-4 py-16">
+      <h2 className="text-3xl font-bold mb-4">Términos y condiciones</h2>
+      <p>A² Vission ofrece:</p>
+      <ul>
+        <li><strong>Plan App:</strong> 50€/mes (6 meses de permanencia). Incluye desarrollo, diseño y soporte.</li>
+        <li><strong>Plan Web:</strong> 40€/mes (6 meses de permanencia). Incluye desarrollo web, diseño y mantenimiento.</li>
+        <li><strong>Plan Único App:</strong> 350€ pago único. Incluye desarrollo y diseño, válido 1 mes.</li>
+        <li><strong>Plan Único Web:</strong> 280€ pago único. Incluye desarrollo y diseño, válido 1 mes.</li>
+        <li><strong>Plan Business App:</strong> 30€/mes (+650€ de alta, 1 año de mantenimiento gratis).</li>
+        <li><strong>Plan Business Web:</strong> 550€/año. Incluye desarrollo, diseño y 1 año de mantenimiento.</li>
+        <li><strong>Marketing:</strong> 80€/mes. Válido hasta cancelar.</li>
+        <li><strong>Mantenimiento:</strong> 65€/mes. Edición y solución de problemas, válido hasta cancelar.</li>
+      </ul>
+      <p>Todos los precios incluyen impuestos. Los planes con permanencia mínima requieren el pago de la totalidad del periodo acordado. Cancelaciones anticipadas pueden incurrir en penalizaciones. Consulta condiciones detalladas y derechos de usuario en este documento.</p>
+      <p>Detalles legales completos... [Aquí puedes añadir el resto de tus cláusulas y condiciones legales.]</p>
+    </section>
+  );
+}
+
+function PrivacyPolicy() {
+  return (
+    <section className="container mx-auto px-4 py-16">
+      <h2 className="text-3xl font-bold mb-4">Política de privacidad</h2>
+      <p>Aquí van las cláusulas, condiciones de privacidad y uso de datos... Tus datos serán tratados conforme a la normativa vigente y sólo para la gestión de los servicios contratados. Consulta el texto legal completo para más información.</p>
+    </section>
+  );
+}
+
 export default function App() {
   // crea admin en el primer render
   useRef(loadUsers()).current;
@@ -167,6 +196,9 @@ export default function App() {
               <Route path="/solicitar/:slug" element={<RequestForm />} />
               <Route path="/admin" element={<AdminPanel />} />
             </Routes>
+            {/* Legal routes */}
+            <Route path="/terms" element={<LegalTerms />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
           </main>
           <Footer />
         </div>
@@ -187,7 +219,7 @@ function NavBar() {
     <header className="bg-white shadow">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-2">
-          <img src="/logo.png" alt="A² Vission" className="h-10 w-10" />
+          <img src="/img/logo.png" alt="A² Vission" className="h-10 w-10" />
           <span className="font-bold text-xl text-sky-600">A² Vission</span>
         </Link>
 
@@ -310,7 +342,7 @@ function Home() {
           </div>
           <div className="flex justify-center md:justify-end">
             <img
-              src="/tagline.png"
+              src="/img/tagline.png"
               alt="tagline"
               className="max-w-sm md:max-w-md"
             />
@@ -587,18 +619,14 @@ function RequestForm() {
             <span className="text-sm">
               Acepto las&nbsp;
               <a
-                href="/docs/terminos_condiciones.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/terms"
                 className="text-sky-600 hover:underline"
               >
                 condiciones
               </a>
               &nbsp;y la&nbsp;
               <a
-                href="/docs/politica_privacidad.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/privacy"
                 className="text-sky-600 hover:underline"
               >
                 política de privacidad
@@ -606,6 +634,14 @@ function RequestForm() {
               .
             </span>
           </div>
+          {plan.details.includes('6 meses') && (
+            <div className="flex items-start space-x-2">
+              <input type="checkbox" required className="mt-1" id="permanence" />
+              <span className="text-sm">
+                Acepto una permanencia mínima de 6 meses para este plan.
+              </span>
+            </div>
+          )}
 
           <button
             type="submit"
@@ -773,7 +809,7 @@ function LegalLinks() {
     <ul className="space-y-2 list-disc list-inside">
       <li>
         <a
-          href="/docs/politica_privacidad.pdf"
+          href="/privacy"
           className="text-sky-600 hover:underline"
         >
           Política de privacidad
@@ -789,7 +825,7 @@ function LegalLinks() {
       </li>
       <li>
         <a
-          href="/docs/terminos_condiciones.pdf"
+          href="/terms"
           className="text-sky-600 hover:underline"
         >
           Cláusulas y condiciones
@@ -924,6 +960,386 @@ function UserRequests() {
                       <p className="text-sm mb-1">
                         <strong>Mensaje admin:</strong> {r.details[idx].message}
                       </p>
+                    ) : (
+                      <p className="text-sm italic text-slate-500">
+                        Sin mensaje para este paso.
+                      </p>
+                    )}
+                    {r.details?.[idx]?.attachment && (
+                      <a
+                        href={r.details[idx].attachment}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-sky-600 hover:underline"
+                      >
+                        Ver archivo adjunto
+                      </a>
+                    )}
+                  </div>
+                ) : null
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-red-600">Rechazado</p>
+          )}
+
+          {r.step < 0 && (
+            <button
+              onClick={() => removeUserRequest(r.id)}
+              className="mt-2 bg-slate-500 text-white text-sm px-3 py-1 rounded"
+            >
+              Eliminar solicitud
+            </button>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
+  
+  function UserSubscriptions() {
+    const subs = loadRequests().filter(r => r.step >= 4);
+    return (
+      <section className="container mx-auto px-4 py-16 space-y-6">
+        <h2 className="text-3xl font-bold text-center">Mis suscripciones</h2>
+        {subs.length === 0 && <p className="text-center text-slate-500">No tienes suscripciones activas.</p>}
+        {subs.map(s => (
+          <div key={s.id} className="border rounded p-4">
+            <h4 className="font-semibold">{ALL_PLANS.find(p => p.slug === s.plan)?.name}</h4>
+            <p className="text-sm text-slate-600">Estado actual: {steps[s.step]}</p>
+          </div>
+        ))}
+      </section>
+    );
+  }
+function Footer() {
+  return (
+    <footer className="bg-slate-900 text-slate-300 text-sm py-8 mt-16">
+      <div className="container mx-auto px-4 flex flex-col md:flex-row md:justify-between space-y-6 md:space-y-0">
+        <div className="space-y-1">
+          <p>
+            Email:{' '}
+            <a
+              href="mailto:website@a2vission.com"
+              className="hover:underline text-white"
+            >
+              website@a2vission.com
+            </a>
+          </p>
+          <p>
+            Teléfono:{' '}
+            <a href="tel:+34666876120" className="hover:underline text-white">
+              +34 666 876 120
+            </a>
+          </p>
+        </div>
+
+        <LegalLinks />
+      </div>
+    </footer>
+  );
+}
+
+/*───────────────────────────────────────────────────────────────*/
+// MySubscriptions
+function MySubscriptions() {
+  const { user } = useAuth();
+  const [subs, setSubs] = useState([]);
+
+  useEffect(() => {
+    const q = query(collection(db, "subscriptions"), where("uid", "==", user.uid));
+    return onSnapshot(q, snap =>
+      setSubs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+  }, [user]);
+
+  const cancel = async (id, permanentEnd) => {
+    if (Date.now() < permanentEnd) {
+      return alert("No puedes cancelar hasta fin de permanencia");
+    }
+    await updateDoc(doc(db, "subscriptions", id), { active: false });
+  };
+
+  return (
+    <section className="container mx-auto px-4 py-16 space-y-8">
+      <h2 className="text-3xl font-bold text-center">Mis suscripciones</h2>
+
+      {subs.length === 0 && (
+        <p className="text-center text-slate-500">
+          Aún no tienes suscripciones activas.
+        </p>
+      )}
+
+      {subs.map(s => {
+        const plan = PLANS.find(p => p.slug === s.plan);
+        const endPerm = s.startAt + plan.permanent * 30 * 24 * 3600 * 1000;
+        const canCancel = Date.now() >= endPerm && s.active;
+
+        return (
+          <div key={s.id} className="border rounded p-4 space-y-2">
+            <div className="flex justify-between items-center">
+              <h4 className="font-semibold">{plan?.name}</h4>
+              <span className={s.active ? 'text-green-600' : 'text-slate-500'}>
+                {s.active ? 'Activa' : 'Cancelada'}
+              </span>
+            </div>
+
+            <p className="text-sm text-slate-600">
+              Inicio: {new Date(s.startAt).toLocaleDateString()}<br />
+              Permanencia: {plan.permanent} meses
+            </p>
+
+            <button
+              className={`mt-2 py-1 px-4 rounded ${
+                canCancel
+                  ? 'bg-red-600 text-white'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+              }`}
+              disabled={!canCancel}
+              onClick={() => canCancel && cancel(s.id, endPerm)}
+            >
+              Cancelar suscripción
+            </button>
+
+            {!canCancel && s.active && (
+              <p className="text-xs text-slate-500">
+                Podrás cancelar a partir del {new Date(endPerm).toLocaleDateString()}.
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+/*───────────────────────────────────────────────────────────────*/
+// Admin Panel
+function AdminPanel() {
+  const { user } = useAuth();
+  const isAdmin = user && user.role === "admin";
+  const [reqs, setReqs] = useState(loadRequests());
+  const [emailAdmin, setEmailAdmin] = useState("");
+  const [msgMap, setMsgMap] = useState({});
+  const [fileMap, setFileMap] = useState({});
+  const [showDetails, setShowDetails] = useState({});
+
+  // recargar cada vez que vuelvo a la vista
+  React.useEffect(() => {
+    const int = setInterval(() => setReqs(loadRequests()), 1000);
+    return () => clearInterval(int);
+  }, []);
+
+  const updateAndSave = (newList) => {
+    saveRequests(newList);
+    setReqs(newList);
+  };
+
+  const setMsg = (id, txt) => setMsgMap({ ...msgMap, [id]: txt });
+  const setFile = (id, data) => setFileMap({ ...fileMap, [id]: data });
+
+  const advanceStep = (id) => {
+    const currentMsg  = msgMap[id] || "";
+    const currentFile = fileMap[id] || "";
+    const list = reqs.map((r) => {
+      if (r.id === id && r.step < steps.length - 1) {
+        const newStep = r.step + 1;
+        const details = { ...(r.details || {}) };
+        details[newStep] = {
+          message: currentMsg,
+          attachment: currentFile,
+        };
+        return {
+          ...r,
+          step: newStep,
+          details,
+        };
+      }
+      return r;
+    });
+    updateAndSave(list);
+    setMsg(id, "");
+    setFile(id, "");
+  };
+
+  const removeRequest = (id) => {
+    const list = reqs.filter(r => r.id !== id);
+    updateAndSave(list);
+  };
+
+  const reject = (id) => {
+    const list = reqs.map((r) => {
+      if (r.id === id) {
+        const details = { ...(r.details || {}) };
+        details[r.step] = {
+          message: msgMap[id] || "",
+          attachment: fileMap[id] || null,
+        };
+        return { ...r, step: -1, details };
+      }
+      return r;
+    });
+    updateAndSave(list);
+    setMsg(id, "");
+    setFile(id, "");
+  };
+
+  const makeAdmin = () => {
+    if (!emailAdmin) return;
+    const users = loadUsers().map((u) =>
+      u.email === emailAdmin ? { ...u, role: "admin" } : u
+    );
+    saveUsers(users);
+    alert("Usuario marcado como administrador (localStorage).");
+    setEmailAdmin("");
+  };
+
+  if (!isAdmin) {
+    return (
+      <section className="container mx-auto px-4 py-16 text-center">
+        <p>No autorizado</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="container mx-auto px-4 py-16 space-y-8">
+      <h2 className="text-3xl font-bold text-center mb-6">
+        Panel de administración
+      </h2>
+
+      {/* Añadir admin */}
+      <div className="border rounded p-4 space-y-2">
+        <h3 className="font-semibold">Añadir usuario admin</h3>
+        <div className="flex space-x-2">
+          <input
+            type="email"
+            value={emailAdmin}
+            onChange={(e) => setEmailAdmin(e.target.value)}
+            placeholder="correo@ejemplo.com"
+            className="flex-1 border rounded p-2"
+          />
+          <button
+            className="bg-sky-600 text-white px-4 rounded"
+            onClick={makeAdmin}
+          >
+            Añadir
+          </button>
+        </div>
+      </div>
+
+      {/* Solicitudes */}
+      <div className="space-y-4">
+        <h3 className="font-semibold">Solicitudes</h3>
+        {reqs.length === 0 && (
+          <p className="text-slate-500 text-sm">No hay solicitudes.</p>
+        )}
+        {reqs
+          .map((r) => (
+          <div key={r.id} className="border rounded p-4 space-y-2">
+            <div className="flex justify-between items-center">
+              <span>
+                {ALL_PLANS.find((p) => p.slug === r.plan)?.name} —{" "}
+                {r.step >= 0
+                  ? `paso ${r.step + 1}/${steps.length}`
+                  : "Rechazado"}
+              </span>
+              <div className="space-x-2">
+  {r.step >= 0 && r.step < steps.length - 1 && (
+    <button
+      onClick={() => advanceStep(r.id)}
+      className="text-sm bg-sky-600 text-white px-2 py-1 rounded"
+    >
+      Avanzar
+    </button>
+  )}
+  {r.step === steps.length - 1 && (
+    <button
+      onClick={() => removeRequest(r.id)}
+      className="text-sm bg-green-600 text-white px-2 py-1 rounded"
+    >
+      Finalizar
+    </button>
+  )}
+  {r.step >= 0 && (
+    <button
+      onClick={() => reject(r.id)}
+      className="text-sm bg-red-600 text-white px-2 py-1 rounded"
+    >
+      Rechazar
+    </button>
+  )}
+  {r.step === -1 && (
+    <button
+      onClick={() => removeRequest(r.id)}
+      className="text-sm bg-slate-500 text-white px-2 py-1 rounded"
+    >
+      Eliminar
+    </button>
+  )}
+</div>
+            </div>
+            <p className="text-xs text-slate-600">
+              {r.step >= 0 ? steps[r.step] : "Rechazado"}
+            </p>
+            <p className="text-xs">
+              Nº solicitud: <strong>{r.ticket}</strong><br/>
+              Email: {r.userEmail} — Tel: {r.phone}<br/>
+              {r.name} {r.lastname}<br/>
+              {r.message}
+            </p>
+            <button
+              onClick={() => setShowDetails({ ...showDetails, [r.id]: !showDetails[r.id] })}
+              className="text-sm underline"
+            >
+              {showDetails[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
+            </button>
+            <div className={showDetails[r.id] ? '' : 'hidden'}>
+              {r.step >= 0 && (
+                <textarea
+                  value={msgMap[r.id] || ""}
+                  onChange={(e) => setMsg(r.id, e.target.value)}
+                  placeholder="Mensaje opcional al usuario"
+                  className="w-full border rounded p-2 text-sm"
+                />
+              )}
+              {r.step === 1 && (
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => setFile(r.id, ev.target.result);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="text-sm"
+                />
+              )}
+              {r.step === 5 && (
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => setFile(r.id, ev.target.result);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="text-sm"
+                />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}                      </p>
                     ) : (
                       <p className="text-sm italic text-slate-500">
                         Sin mensaje para este paso.
