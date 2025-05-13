@@ -313,9 +313,17 @@ function PaymentCard({ plan }) {
       <h4 className="text-lg font-semibold mb-2">{plan.name}</h4>
       <p className="text-2xl font-bold text-sky-600 mb-2">{plan.price}</p>
       <p className="text-sm text-slate-600 flex-1">{plan.details}</p>
+      {/* New details link */}
       <Link
         to={`/planes/${plan.slug}`}
-        className="mt-4 py-2 bg-sky-600 text-white rounded-md text-center hover:bg-sky-700"
+        className="mt-2 py-2 bg-gray-200 text-slate-700 rounded-md text-center hover:bg-gray-300"
+      >
+        Ver detalles
+      </Link>
+      {/* Existing request button */}
+      <Link
+        to={`/solicitar/${plan.slug}`}
+        className="mt-2 py-2 bg-sky-600 text-white rounded-md text-center hover:bg-sky-700"
       >
         Solicitar aquí
       </Link>
@@ -809,28 +817,19 @@ function LegalLinks() {
   return (
     <ul className="space-y-2 list-disc list-inside">
       <li>
-        <a
-          href="/privacy"
-          className="text-sky-600 hover:underline"
-        >
+        <Link to="/privacy" className="text-sky-600 hover:underline">
           Política de privacidad
-        </a>
+        </Link>
       </li>
       <li>
-        <a
-          href="/docs/politica_devolucion.pdf"
-          className="text-sky-600 hover:underline"
-        >
+        <Link to="/refund" className="text-sky-600 hover:underline">
           Política de devolución
-        </a>
+        </Link>
       </li>
       <li>
-        <a
-          href="/terms"
-          className="text-sky-600 hover:underline"
-        >
+        <Link to="/terms" className="text-sky-600 hover:underline">
           Cláusulas y condiciones
-        </a>
+        </Link>
       </li>
     </ul>
   );
