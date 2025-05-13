@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, createContext } from "react";
+impoimport React, { useState, useRef, useEffect, useContext, createContext } from "react";
 import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
@@ -1304,26 +1305,10 @@ function AdminPanel() {
                     className="w-full border rounded p-2 text-sm"
                   />
                   <button
-                    onClick={() => {
-                      // update current message in r.details without advancing step
-                      const updated = reqs.map(rr => {
-                        if (rr.id === r.id) {
-                          const details = { ...(rr.details || {}) };
-                          details[rr.step] = {
-                            ...details[rr.step],
-                            message: msgMap[r.id] || ""
-                          };
-                          return { ...rr, details };
-                        }
-                        return rr;
-                      });
-                      updateAndSave(updated);
-                      setMsg(r.id, "");
-                      alert("Mensaje guardado");
-                    }}
+                    onClick={() => advanceStep(r.id)}
                     className="mt-2 text-sm bg-blue-600 text-white px-2 py-1 rounded"
                   >
-                    Guardar mensaje
+                    Guardar y enviar
                   </button>
                 </>
               )}
