@@ -1296,12 +1296,36 @@ function AdminPanel() {
             </button>
             <div className={showDetails[r.id] ? '' : 'hidden'}>
               {r.step >= 0 && (
-                <textarea
-                  value={msgMap[r.id] || ""}
-                  onChange={(e) => setMsg(r.id, e.target.value)}
-                  placeholder="Mensaje opcional al usuario"
-                  className="w-full border rounded p-2 text-sm"
-                />
+                <>
+                  <textarea
+                    value={msgMap[r.id] || ""}
+                    onChange={(e) => setMsg(r.id, e.target.value)}
+                    placeholder="Mensaje opcional al usuario"
+                    className="w-full border rounded p-2 text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      // update current message in r.details without advancing step
+                      const updated = reqs.map(rr => {
+                        if (rr.id === r.id) {
+                          const details = { ...(rr.details || {}) };
+                          details[rr.step] = {
+                            ...details[rr.step],
+                            message: msgMap[r.id] || ""
+                          };
+                          return { ...rr, details };
+                        }
+                        return rr;
+                      });
+                      updateAndSave(updated);
+                      setMsg(r.id, "");
+                      alert("Mensaje guardado");
+                    }}
+                    className="mt-2 text-sm bg-blue-600 text-white px-2 py-1 rounded"
+                  >
+                    Guardar mensaje
+                  </button>
+                </>
               )}
               {r.step === 1 && (
                 <input
