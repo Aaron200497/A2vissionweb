@@ -45,11 +45,9 @@ function AuthProvider({ children }) {
     localStorage.setItem("currentUser", JSON.stringify(u));
     setUser(u);
   };
-  const navigate = useNavigate();
   const logout = () => {
     localStorage.removeItem("currentUser");
     setUser(null);
-    navigate("/");
   };
 
   return (
@@ -225,6 +223,7 @@ function NavBar() {
   const [userOpen, setUserOpen] = useState(false);
   // Red dot for unread user requests (only for normal user)
   const [hasUnread, setHasUnread] = useState(false);
+  const navigate = useNavigate();
   useEffect(() => {
     if (user && user.role !== "admin") {
       const reqs = loadRequests();
@@ -261,13 +260,13 @@ function NavBar() {
                       <span className="inline-block w-2 h-2 bg-red-600 rounded-full ml-2" />
                     )}
                   </Link>
-                  <button onClick={logout} className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Cerrar sesión</button>
+                  <button onClick={() => { logout(); navigate("/"); }} className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Cerrar sesión</button>
                 </div>
               )}
             </div>
           )}
           {user && user.role === "admin" && (
-            <button onClick={logout} className="text-slate-700 hover:text-sky-600">
+            <button onClick={() => { logout(); navigate("/"); }} className="text-slate-700 hover:text-sky-600">
               Cerrar sesión
             </button>
           )}
@@ -305,7 +304,7 @@ function NavBar() {
           )}
           {user && (
             <button
-              onClick={() => {logout(); setOpen(false);}}
+              onClick={() => { logout(); navigate("/"); setOpen(false); }}
               className="block w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50"
             >
               Cerrar sesión
