@@ -17,12 +17,13 @@ import {
 } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_STORAGE_BUCKET",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyACuVKmVc7xS4K5TVljAeQTq7WNP_UC8n0",
+  authDomain: "a2vissionweb.firebaseapp.com",
+  projectId: "a2vissionweb",
+  storageBucket: "a2vissionweb.firebasestorage.app",
+  messagingSenderId: "127311201904",
+  appId: "1:127311201904:web:1b3bc95feb069bdc7d56b5",
+  measurementId: "G-25MGLNYKEL"
 };
 
 const app  = initializeApp(firebaseConfig);
