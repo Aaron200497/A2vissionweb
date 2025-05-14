@@ -1209,33 +1209,48 @@ function UserRequests() {
 }
   
 function UserSubscriptions() {
-  const subs = loadSubscriptions();
+  const [subs, setSubs] = useState([]);
+
+  useEffect(() => {
+    loadSubscriptions().then(setSubs).catch(console.error);
+  }, []);
+
   return (
     <section className="container mx-auto px-4 py-16 space-y-6">
       <h2 className="text-3xl font-bold text-center">Mis suscripciones</h2>
-      {subs.length === 0 && <p className="text-center text-slate-500">No tienes suscripciones activas.</p>}
-      {subs.map(s => {
-        const plan = ALL_PLANS.find(p => p.slug === s.plan);
-        const start   = new Date(s.start);
+      {subs.length === 0 && (
+        <p className="text-center text-slate-500">
+          No tienes suscripciones activas.
+        </p>
+      )}
+      {subs.map((s) => {
+        const plan = ALL_PLANS.find((p) => p.slug === s.plan);
+        const start = new Date(s.start);
         const permEnd = new Date(start);
         permEnd.setMonth(permEnd.getMonth() + 6);
-        const today   = new Date();
+        const today = new Date();
         const canCancel = today > permEnd;
         return (
           <div key={s.id} className="border rounded p-4 space-y-2">
             <h4 className="font-semibold">{plan?.name}</h4>
             <p className="text-sm text-slate-600">Precio: {plan?.price}</p>
             <p className="text-sm text-slate-600">
-              Inicio: {start.toLocaleDateString()}<br/>
+              Inicio: {start.toLocaleDateString()}
+              <br />
               Fin permanencia: {permEnd.toLocaleDateString()}
             </p>
             <button
               disabled={!canCancel}
-              className={`px-4 py-1 rounded ${canCancel ? "bg-red-600 text-white" : "bg-slate-300 text-slate-500"}`}
+              className={`px-4 py-1 rounded ${
+                canCancel
+                  ? "bg-red-600 text-white"
+                  : "bg-slate-300 text-slate-500"
+              }`}
               onClick={() => {
-                if(!canCancel) return;
-                alert("Se procesará la cancelación al final del periodo pagado.");
-                // aquí podrías marcar la suscripción como cancelada en localStorage
+                if (!canCancel) return;
+                alert(
+                  "Se procesará la cancelación al final del periodo pagado."
+                );
               }}
             >
               Cancelar suscripción
@@ -1649,23 +1664,26 @@ function AdminPanel() {
   // Users panel
   function UsersPanel() {
     const [search, setSearch] = useState("");
-    const [list, setList] = useState(loadUsers());
+    const [list, setList] = useState([]);
+    useEffect(() => {
+      loadUsers().then(setList).catch(console.error);
+    }, []);
 
-    const saveAndRefresh = (arr) => {
-      saveUsers(arr);
+    const saveAndRefresh = async (arr) => {
+      await saveUsers(arr);
       setList(arr);
     };
 
-    const toggleBlock = (email) => {
+    const toggleBlock = async (email) => {
       const updated = list.map(u =>
         u.email === email ? { ...u, blocked: !u.blocked } : u
       );
-      saveAndRefresh(updated);
+      await saveAndRefresh(updated);
     };
 
-    const deleteUser = (email) => {
+    const deleteUser = async (email) => {
       const filtered = list.filter(u => u.email !== email);
-      saveAndRefresh(filtered);
+      await saveAndRefresh(filtered);
     };
 
     const filtered = list.filter(u =>
@@ -1718,20 +1736,35 @@ function AdminPanel() {
 
   // Subscriptions panel
   function SubscriptionsPanel() {
-    const subs = loadSubscriptions();
+    const [subs, setSubs] = useState([]);
+
+    useEffect(() => {
+      loadSubscriptions().then(setSubs).catch(console.error);
+    }, []);
+
     const removeSub = (id) => {
-      const list = subs.filter(s => s.id !== id);
+      const list = subs.filter((s) => s.id !== id);
       saveSubscriptions(list);
-      alert('Suscripción eliminada');
-      setReqs(loadRequests());
+      setSubs(list);
     };
+
     return (
       <div>
         <h3 className="font-semibold">Suscripciones asignadas</h3>
-        {subs.map(s => (
+        {subs.length === 0 && (
+          <p className="text-sm text-slate-500">No hay suscripciones.</p>
+        )}
+        {subs.map((s) => (
           <div key={s.id} className="flex justify-between py-1">
-            <span>{s.email} — {ALL_PLANS.find(p => p.slug === s.plan)?.name}</span>
-            <button onClick={() => removeSub(s.id)} className="text-red-600">Eliminar</button>
+            <span>
+              {s.email} — {ALL_PLANS.find((p) => p.slug === s.plan)?.name}
+            </span>
+            <button
+              onClick={() => removeSub(s.id)}
+              className="text-red-600 text-sm"
+            >
+              Eliminar
+            </button>
           </div>
         ))}
       </div>
