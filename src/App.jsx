@@ -867,22 +867,25 @@ function Register() {
 
   const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const submit = e => {
+  const submit = async (e) => {
     e.preventDefault();
-    // Password validation
+    // Validación de contraseña
     const pwd = form.password;
     if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}/.test(pwd)) {
       return alert("La contraseña debe tener mínimo 8 caracteres, incluir mayúsculas, minúsculas y números.");
     }
-    // Sanitize fields
+    // Limpieza de campos
     form.email = form.email.trim();
     form.name = form.name.trim();
     form.lastname = form.lastname.trim();
     form.address = form.address.trim();
-    const users = loadUsers();
-    if (users.find(u => u.email === form.email)) return alert("Ese correo ya existe.");
+
+    const users = await loadUsers();        // obtenemos lista actual
+    if (users.find(u => u.email === form.email)) {
+      return alert("Ese correo ya existe.");
+    }
     users.push({ ...form, role: "user", blocked: false });
-    saveUsers(users);
+    await saveUsers(users);                // guardamos local + Firestore
     alert("Cuenta creada, inicia sesión.");
     nav("/login");
   };
@@ -914,9 +917,9 @@ function Login() {
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const users = loadUsers();
+    const users = await loadUsers();      // ahora esperamos la descarga/caché
     const found = users.find(
       (u) => u.email === form.email && u.password === form.password
     );
