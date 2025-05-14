@@ -3,15 +3,11 @@ import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
 // ───────────── Simple localStorage auth (demo) ─────────────
-const ADMIN_ACCOUNTimport React, { useState, useRef, useEffect, useContext, createContext } from "react";
-import emailjs from "@emailjs/browser";
-import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from "react-router-dom";
-
-// ───────────── Simple localStorage auth (demo) ─────────────
 const ADMIN_ACCOUNT = {
   email: "website@a2vission.com",
   password: "AA324/7bobita",
   role: "admin",
+  blocked: false,
 };
 function loadUsers() {
   const stored = JSON.parse(localStorage.getItem("users") || "[]");
@@ -35,6 +31,7 @@ const EMAIL_SERVICE_ID  = "service_fx1243i";
 const EMAIL_PUBLIC_KEY  = "ErTYhXQrHedtLERfM";
 const TEMPLATE_REPLY    = "template_t8w8wdj";   // auto‑reply al cliente
 const TEMPLATE_ADMIN    = "template_t5c91au";   // aviso interno
+const TEMPLATE_PASSWORD = "template_pwchange";  // aviso cambio de contraseña
 
 /*──────────────────────────
   Auth context (localStorage)
@@ -156,32 +153,94 @@ const RECOMMENDED = [APP_PLANS[0], WEB_PLANS[0]];
 /*──────────────────────────
   Root
 ──────────────────────────*/
-function LegalTerms() {
+function PrivacyPolicy() {
   return (
-    <section className="container mx-auto px-4 py-16">
-      <h2 className="text-3xl font-bold mb-4">Términos y condiciones</h2>
-      <p>A² Vission ofrece:</p>
-      <ul>
-        <li><strong>Plan App:</strong> 50€/mes (6 meses de permanencia). Incluye desarrollo, diseño y soporte.</li>
-        <li><strong>Plan Web:</strong> 40€/mes (6 meses de permanencia). Incluye desarrollo web, diseño y mantenimiento.</li>
-        <li><strong>Plan Único App:</strong> 350€ pago único. Incluye desarrollo y diseño, válido 1 mes.</li>
-        <li><strong>Plan Único Web:</strong> 280€ pago único. Incluye desarrollo y diseño, válido 1 mes.</li>
-        <li><strong>Plan Business App:</strong> 30€/mes (+650€ de alta, 1 año de mantenimiento gratis).</li>
-        <li><strong>Plan Business Web:</strong> 550€/año. Incluye desarrollo, diseño y 1 año de mantenimiento.</li>
-        <li><strong>Marketing:</strong> 80€/mes. Válido hasta cancelar.</li>
-        <li><strong>Mantenimiento:</strong> 65€/mes. Edición y solución de problemas, válido hasta cancelar.</li>
-      </ul>
-      <p>Todos los precios incluyen impuestos. Los planes con permanencia mínima requieren el pago de la totalidad del periodo acordado. Cancelaciones anticipadas pueden incurrir en penalizaciones. Consulta condiciones detalladas y derechos de usuario en este documento.</p>
-      <p>Detalles legales completos... [Aquí puedes añadir el resto de tus cláusulas y condiciones legales.]</p>
+    <section className="container mx-auto px-4 py-16 space-y-4">
+      <h2 className="text-3xl font-bold">Política de privacidad</h2>
+      <p>
+        A² Vission cumple el Reglamento (UE) 2016/679 (RGPD) y la
+        LOPDGDD 3/2018. Los datos que nos facilites —nombre, e‑mail,
+        teléfono y detalles del proyecto— se usarán únicamente para
+        gestionar los servicios contratados, facturación y soporte.
+      </p>
+      <p>
+        Puedes ejercer tus derechos de acceso, rectificación,
+        supresión, portabilidad y oposición enviando un correo a&nbsp;
+        <a href="mailto:website@a2vission.com"
+           className="text-sky-600 underline">website@a2vission.com</a>.
+      </p>
+      <p>
+        No cedemos datos a terceros salvo obligación legal o
+        proveedores imprescindibles (plataformas de pago,
+        alojamiento, e‑mail). Conservaremos tu información mientras
+        exista relación contractual y los plazos legales de
+        prescripción fiscal.
+      </p>
     </section>
   );
 }
 
-function PrivacyPolicy() {
+function LegalTerms() {
   return (
-    <section className="container mx-auto px-4 py-16">
-      <h2 className="text-3xl font-bold mb-4">Política de privacidad</h2>
-      <p>Aquí van las cláusulas, condiciones de privacidad y uso de datos... Tus datos serán tratados conforme a la normativa vigente y sólo para la gestión de los servicios contratados. Consulta el texto legal completo para más información.</p>
+    <section className="container mx-auto px-4 py-16 space-y-4">
+      <h2 className="text-3xl font-bold">Términos y condiciones</h2>
+      <p>
+        A² Vission (en adelante “el Prestador”) ofrece planes de
+        desarrollo web y app cuyo detalle y precio se muestra en esta
+        página. El Cliente declara ser mayor de edad y tener
+        capacidad para contratar.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Los planes <strong>App</strong> y <strong>Web</strong> llevan una
+          permanencia mínima de 6&nbsp;meses. El Cliente se compromete al
+          pago íntegro de dicho periodo.
+        </li>
+        <li>
+          Finalizada la permanencia, la suscripción se renueva
+          automáticamente mes a mes hasta cancelación.
+        </li>
+        <li>
+          Las cuotas se abonan por adelantado mediante tarjeta o
+          débito SEPA. El impago supondrá la suspensión del servicio
+          tras 15&nbsp;días.
+        </li>
+        <li>
+          El Prestador entregará las primeras versiones (“preview”) en
+          los plazos acordados y realizará hasta dos rondas de
+          ajustes sin coste extra.
+        </li>
+        <li>
+          Cualquier funcionalidad no contemplada originalmente se
+          presupuestará aparte.
+        </li>
+      </ul>
+      <p>
+        Para más información escribe a&nbsp;
+        <a href="mailto:website@a2vission.com"
+           className="text-sky-600 underline">website@a2vission.com</a>.
+      </p>
+    </section>
+  );
+}
+
+function RefundPolicy() {
+  return (
+    <section className="container mx-auto px-4 py-16 space-y-4">
+      <h2 className="text-3xl font-bold">Política de devolución y reembolso</h2>
+      <p>
+        Si el trabajo entregado no cumple las especificaciones, el
+        Cliente dispone de <strong>15&nbsp;días</strong> desde la
+        contratación para solicitar reembolso enviando un correo a&nbsp;
+        <a href="mailto:website@a2vission.com"
+           className="text-sky-600 underline">website@a2vission.com</a>{' '}
+        detallando el motivo. No se admitirán devoluciones por cambios
+        de opinión o peticiones fuera del alcance acordado.
+      </p>
+      <p>
+        Tras la validación, el importe se devolverá mediante el mismo
+        método de pago en un plazo máximo de 7&nbsp;días laborables.
+      </p>
     </section>
   );
 }
@@ -208,8 +267,9 @@ export default function App() {
               <Route path="/solicitar/:slug" element={<RequestForm />} />
               <Route path="/admin" element={<AdminPanel />} />
               {/* Legal routes */}
-              <Route path="/terms" element={<LegalTerms />} />
+              <Route path="/terms"   element={<LegalTerms />}   />
               <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/refund"  element={<RefundPolicy />}  />
             </Routes>
           </main>
           <Footer />
@@ -225,7 +285,6 @@ export default function App() {
 function NavBar() {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
-  const location = useLocation();
   const [userOpen, setUserOpen] = useState(false);
   // Red dot for unread user requests (only for normal user)
   const [hasUnread, setHasUnread] = useState(false);
@@ -236,14 +295,6 @@ function NavBar() {
       setHasUnread(reqs.some(r => r.unread));
     }
   }, [user]);
-
-  useEffect(() => {
-    if (user && user.role !== "admin" && location.pathname === "/mis-solicitudes") {
-      const cleared = loadRequests().map(r => ({ ...r, unread: false }));
-      saveRequests(cleared);
-      setHasUnread(false);
-    }
-  }, [location.pathname, user]);
 
   return (
     <header className="bg-white shadow">
@@ -268,19 +319,12 @@ function NavBar() {
                 <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow">
                   <Link to="/profile" className="block px-4 py-2 text-sm hover:bg-slate-50">Mi perfil</Link>
                   <Link to="/suscripciones" className="block px-4 py-2 text-sm hover:bg-slate-50">Suscripciones</Link>
-                  <Link
-  to="/mis-solicitudes"
-  className="block px-4 py-2 text-sm hover:bg-slate-50 flex items-center"
-  onClick={() => {
-    const reqs = (JSON.parse(localStorage.getItem("requests") || "[]"))
-      .map(r => ({ ...r, unread: false }));
-    localStorage.setItem("requests", JSON.stringify(reqs));
-    setHasUnread(false);
-  }}
->
-  Solicitudes
-  {hasUnread && <span className="inline-block w-2 h-2 bg-red-600 rounded-full ml-2" />}
-</Link>
+                  <Link to="/mis-solicitudes" className="block px-4 py-2 text-sm hover:bg-slate-50 flex items-center">
+                    Solicitudes
+                    {hasUnread && (
+                      <span className="inline-block w-2 h-2 bg-red-600 rounded-full ml-2" />
+                    )}
+                  </Link>
                   <button onClick={() => { logout(); navigate("/"); }} className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Cerrar sesión</button>
                 </div>
               )}
@@ -543,13 +587,20 @@ function RequestForm() {
     // Generar número de ticket de 6 dígitos
     const ticket = Date.now().toString().slice(-6);
 
+    // incluye ticket como <input hidden> para que llegue al e‑mail de confirmación
+    const ticketInput = document.createElement("input");
+    ticketInput.type = "hidden";
+    ticketInput.name = "ticket";
+    ticketInput.value = ticket;
+    formRef.current.appendChild(ticketInput);
+
     // 1) Auto‑reply al cliente  (formRef contiene todos los campos)
     emailjs
       .sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, PUBLIC_KEY)
       .then(() => {
         // 2) Notificación interna con un segundo template
         const adminParams = {
-          ticket,
+          ticket,   // usado también en el auto‑reply
           plan: plan.name,
           email: formData.email,
           phone: formData.phone,
@@ -776,7 +827,7 @@ function Register() {
     form.address = form.address.trim();
     const users = loadUsers();
     if (users.find(u => u.email === form.email)) return alert("Ese correo ya existe.");
-    users.push({ ...form, role: "user" });
+    users.push({ ...form, role: "user", blocked: false });
     saveUsers(users);
     alert("Cuenta creada, inicia sesión.");
     nav("/login");
@@ -815,6 +866,9 @@ function Login() {
     const found = users.find(
       (u) => u.email === form.email && u.password === form.password
     );
+    if (found && found.blocked) {
+      return alert("Cuenta bloqueada. Contacte con soporte.");
+    }
     if (!found) return alert("Credenciales incorrectas");
     login(found);
     alert(`Bienvenido ${found.role === "admin" ? "administrador" : "usuario"}`);
@@ -884,46 +938,54 @@ function LegalLinks() {
   );
 }
 function Profile() {
-    const { user, login } = useAuth();
-    const [form, setForm] = useState(user);
-    const [newPass, setNewPass] = useState("");
-  
-    const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
-  
-    const save = () => {
-      const users = loadUsers().map(u => u.email === user.email ? { ...u, ...form } : u);
-      saveUsers(users);
-      login({ ...user, ...form });   // actualiza contexto
-      alert("Perfil actualizado");
-    };
-  
-    const changePw = () => {
-      if (!newPass) return;
-      const users = loadUsers().map(u => u.email === user.email ? { ...u, password: newPass } : u);
-      saveUsers(users);
-      alert("Contraseña cambiada");
-      setNewPass("");
-    };
-  
-    return (
-      <section className="container mx-auto px-4 py-16 max-w-md space-y-6">
-        <h2 className="text-2xl font-bold text-center">Mi perfil</h2>
-        <div className="space-y-3">
-          <input value={form.email} disabled className="w-full border rounded p-2 bg-slate-100" />
-          <input name="phone" value={form.phone} onChange={handle} placeholder="Teléfono" className="w-full border rounded p-2" />
-          <input name="name" value={form.name} onChange={handle} placeholder="Nombre" className="w-full border rounded p-2" />
-          <input name="lastname" value={form.lastname} onChange={handle} placeholder="Apellidos" className="w-full border rounded p-2" />
-          <input name="address" value={form.address} onChange={handle} placeholder="Dirección" className="w-full border rounded p-2" />
-          <button onClick={save} className="w-full bg-sky-600 text-white rounded py-2">Guardar cambios</button>
-        </div>
-  
-        <div className="space-y-3">
-          <input type="password" value={newPass} onChange={e=>setNewPass(e.target.value)} placeholder="Nueva contraseña" className="w-full border rounded p-2" />
-          <button onClick={changePw} className="w-full bg-sky-600 text-white rounded py-2">Cambiar contraseña</button>
-        </div>
-      </section>
+  const { user, login } = useAuth();
+  const [form, setForm] = useState(user);
+  const [newPass, setNewPass] = useState("");
+
+  const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const save = () => {
+    const users = loadUsers().map(u => u.email === user.email ? { ...u, ...form } : u);
+    saveUsers(users);
+    login({ ...user, ...form });   // actualiza contexto
+    alert("Perfil actualizado");
+  };
+
+  const changePw = () => {
+    if (!newPass) return;
+    const users = loadUsers().map(u =>
+      u.email === user.email ? { ...u, password: newPass } : u
     );
-  }
+    saveUsers(users);
+    emailjs.send(
+      EMAIL_SERVICE_ID,
+      TEMPLATE_PASSWORD,
+      { to_email: user.email, new_password: newPass },
+      EMAIL_PUBLIC_KEY
+    ).catch(err => console.error("Email PW:", err));
+    alert("Contraseña cambiada (se ha enviado un e‑mail de aviso).");
+    setNewPass("");
+  };
+
+  return (
+    <section className="container mx-auto px-4 py-16 max-w-md space-y-6">
+      <h2 className="text-2xl font-bold text-center">Mi perfil</h2>
+      <div className="space-y-3">
+        <input value={form.email} disabled className="w-full border rounded p-2 bg-slate-100" />
+        <input name="phone" value={form.phone} onChange={handle} placeholder="Teléfono" className="w-full border rounded p-2" />
+        <input name="name" value={form.name} onChange={handle} placeholder="Nombre" className="w-full border rounded p-2" />
+        <input name="lastname" value={form.lastname} onChange={handle} placeholder="Apellidos" className="w-full border rounded p-2" />
+        <input name="address" value={form.address} onChange={handle} placeholder="Dirección" className="w-full border rounded p-2" />
+        <button onClick={save} className="w-full bg-sky-600 text-white rounded py-2">Guardar cambios</button>
+      </div>
+
+      <div className="space-y-3">
+        <input type="password" value={newPass} onChange={e=>setNewPass(e.target.value)} placeholder="Nueva contraseña" className="w-full border rounded p-2" />
+        <button onClick={changePw} className="w-full bg-sky-600 text-white rounded py-2">Cambiar contraseña</button>
+      </div>
+    </section>
+  );
+}
   
 /* Visual timeline de estado */
 function ProgressLine({ step, onClickStep }) {
@@ -1093,57 +1155,37 @@ function UserRequests() {
 }
   
 function UserSubscriptions() {
-  const [subs, setSubs] = useState(loadSubscriptions());
+  const subs = loadSubscriptions();
   return (
     <section className="container mx-auto px-4 py-16 space-y-6">
       <h2 className="text-3xl font-bold text-center">Mis suscripciones</h2>
       {subs.length === 0 && <p className="text-center text-slate-500">No tienes suscripciones activas.</p>}
       {subs.map(s => {
-        const plan = ALL_PLANS.find(p => p.slug === s.plan) || {};
-        const start = new Date(s.start);
-        const permanence = /6 meses/i.test(plan.details) ? 6 : 0;
-        const endPerm = new Date(start);
-        endPerm.setMonth(start.getMonth() + permanence);
-
-        // próxima renovación cada mes tras el inicio
-        const monthsFromStart = Math.floor((Date.now() - start) / (30 * 24 * 3600 * 1000));
-        const nextRenewal = new Date(start);
-        nextRenewal.setMonth(start.getMonth() + monthsFromStart + 1);
-
-        const canCancel = !s.canceled && (permanence === 0 || Date.now() >= endPerm);
-
-        const doCancel = () => {
-          const list = subs.map(x =>
-            x.id === s.id ? { ...x, canceled: true, keepUntil: nextRenewal.toISOString() } : x
-          );
-          saveSubscriptions(list);
-          setSubs(list);
-        };
-
+        const plan = ALL_PLANS.find(p => p.slug === s.plan);
+        const start   = new Date(s.start);
+        const permEnd = new Date(start);
+        permEnd.setMonth(permEnd.getMonth() + 6);
+        const today   = new Date();
+        const canCancel = today > permEnd;
         return (
-          <div key={s.id} className="border rounded p-4 space-y-1">
-            <h4 className="font-semibold">{plan.name} – {plan.price}</h4>
-            <p className="text-sm">Inicio: {start.toLocaleDateString()}</p>
-            {permanence > 0 && (
-              <p className="text-sm">Fin permanencia: {endPerm.toLocaleDateString()}</p>
-            )}
-            <p className="text-sm">Próxima renovación: {nextRenewal.toLocaleDateString()}</p>
-
-            {!s.canceled ? (
-              <button
-                onClick={doCancel}
-                disabled={!canCancel}
-                className={`mt-2 py-1 px-4 rounded ${
-                  canCancel ? "bg-red-600 text-white" : "bg-slate-300 text-slate-500 cursor-not-allowed"
-                }`}
-              >
-                Cancelar suscripción
-              </button>
-            ) : (
-              <p className="text-xs text-slate-500">
-                Activa hasta el {new Date(s.keepUntil).toLocaleDateString()}.
-              </p>
-            )}
+          <div key={s.id} className="border rounded p-4 space-y-2">
+            <h4 className="font-semibold">{plan?.name}</h4>
+            <p className="text-sm text-slate-600">Precio: {plan?.price}</p>
+            <p className="text-sm text-slate-600">
+              Inicio: {start.toLocaleDateString()}<br/>
+              Fin permanencia: {permEnd.toLocaleDateString()}
+            </p>
+            <button
+              disabled={!canCancel}
+              className={`px-4 py-1 rounded ${canCancel ? "bg-red-600 text-white" : "bg-slate-300 text-slate-500"}`}
+              onClick={() => {
+                if(!canCancel) return;
+                alert("Se procesará la cancelación al final del periodo pagado.");
+                // aquí podrías marcar la suscripción como cancelada en localStorage
+              }}
+            >
+              Cancelar suscripción
+            </button>
           </div>
         );
       })}
@@ -1380,6 +1422,9 @@ function AdminPanel() {
           <button onClick={() => setView('requests')} className="block w-full text-left">Solicitudes</button>
           <button onClick={() => setView('subscriptions')} className="block w-full text-left">Suscripciones</button>
           <button onClick={() => setView('users')} className="block w-full text-left">Usuarios</button>
+          <a href="https://dashboard.stripe.com/login" target="_blank" rel="noopener noreferrer" className="block w-full text-left">
+            Pagos (Stripe)
+          </a>
         </nav>
       </aside>
     );
@@ -1544,20 +1589,68 @@ function AdminPanel() {
 
   // Users panel
   function UsersPanel() {
-    const users = loadUsers();
-    const deleteUser = (email) => {
-      const filtered = users.filter(u => u.email !== email);
-      saveUsers(filtered);
-      alert('Usuario eliminado');
-      setReqs(loadRequests()); // trigger re-render
+    const [search, setSearch] = useState("");
+    const [list, setList] = useState(loadUsers());
+
+    const saveAndRefresh = (arr) => {
+      saveUsers(arr);
+      setList(arr);
     };
+
+    const toggleBlock = (email) => {
+      const updated = list.map(u =>
+        u.email === email ? { ...u, blocked: !u.blocked } : u
+      );
+      saveAndRefresh(updated);
+    };
+
+    const deleteUser = (email) => {
+      const filtered = list.filter(u => u.email !== email);
+      saveAndRefresh(filtered);
+    };
+
+    const filtered = list.filter(u =>
+      u.email.toLowerCase().includes(search.toLowerCase())
+    );
+
     return (
-      <div>
+      <div className="space-y-4">
         <h3 className="font-semibold">Usuarios registrados</h3>
-        {users.map(u => (
-          <div key={u.email} className="flex justify-between py-1">
-            <span>{u.email} ({u.role})</span>
-            <button onClick={() => deleteUser(u.email)} className="text-red-600">Eliminar</button>
+
+        <input
+          type="text"
+          placeholder="Buscar correo…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="border rounded p-2 w-full md:w-80"
+        />
+
+        {filtered.length === 0 && (
+          <p className="text-sm text-slate-500">Sin resultados.</p>
+        )}
+
+        {filtered.map(u => (
+          <div
+            key={u.email}
+            className="flex flex-col md:flex-row md:items-center md:justify-between border rounded p-2 mt-2"
+          >
+            <span>
+              {u.email} ({u.role}) {u.blocked && <span className="text-red-600">(bloqueado)</span>}
+            </span>
+            <div className="space-x-2 mt-2 md:mt-0">
+              <button
+                onClick={() => toggleBlock(u.email)}
+                className={`px-2 py-1 rounded text-white ${u.blocked ? "bg-green-600" : "bg-yellow-600"}`}
+              >
+                {u.blocked ? "Desbloquear" : "Bloquear"}
+              </button>
+              <button
+                onClick={() => deleteUser(u.email)}
+                className="px-2 py-1 rounded bg-red-600 text-white"
+              >
+                Eliminar
+              </button>
+            </div>
           </div>
         ))}
       </div>
