@@ -22,8 +22,7 @@ import {
   auth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  deleteDoc
+  sendPasswordResetEmail
 } from "./firebase";
 
 // ⬇️ Rellena con las claves reales de tu proyecto en Firebase Console
