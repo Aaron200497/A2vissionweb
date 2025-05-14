@@ -14,6 +14,13 @@ import {
   doc
 } from "firebase/firestore";
 
+// Firebase Auth helpers
+import {
+  auth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from "./firebase";
+
 // ⬇️ Rellena con las claves reales de tu proyecto en Firebase Console
 const firebaseConfig = {
     apiKey: "AIzaSyACuVKmVc7xS4K5TVljAeQTq7WNP_UC8n0",
@@ -38,15 +45,19 @@ const ADMIN_ACCOUNT = {
 };
 // Descarga todos los usuarios de Firestore y los deja cacheados en localStorage
 async function loadUsers() {
-  const snap = await getDocs(collection(db, "users"));
-  const list = snap.docs.map(d => d.data());
-
-  // si aún no existe el admin por defecto, añádelo localmente
-  if (!list.find(u => u.email === ADMIN_ACCOUNT.email)) {
-    list.push(ADMIN_ACCOUNT);
+  try {
+    const snap = await getDocs(collection(db, "users"));
+    const list = snap.docs.map(d => d.data());
+    if (!list.find(u => u.email === ADMIN_ACCOUNT.email)) {
+      list.push(ADMIN_ACCOUNT);
+    }
+    localStorage.setItem("users", JSON.stringify(list));
+    return list;
+  } catch (err) {
+    console.error("🔥 loadUsers()", err.code || err);
+    // fallback a modo offline
+    return JSON.parse(localStorage.getItem("users") || "[]");
   }
-  localStorage.setItem("users", JSON.stringify(list));
-  return list;
 }
 async function saveUsers(list) {
   // guarda local
@@ -869,25 +880,32 @@ function Register() {
 
   const submit = async (e) => {
     e.preventDefault();
-    // Validación de contraseña
+    // validación contraseña
     const pwd = form.password;
     if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}/.test(pwd)) {
       return alert("La contraseña debe tener mínimo 8 caracteres, incluir mayúsculas, minúsculas y números.");
     }
-    // Limpieza de campos
+    // sanea campos
     form.email = form.email.trim();
     form.name = form.name.trim();
     form.lastname = form.lastname.trim();
     form.address = form.address.trim();
 
-    const users = await loadUsers();        // obtenemos lista actual
-    if (users.find(u => u.email === form.email)) {
-      return alert("Ese correo ya existe.");
+    try {
+      // 1‑ crea el usuario en Firebase Auth
+      await createUserWithEmailAndPassword(auth, form.email, form.password);
+
+      // 2‑ guarda ficha en Firestore + localStorage
+      const users = await loadUsers();
+      users.push({ ...form, role: "user", blocked: false });
+      await saveUsers(users);
+
+      alert("Cuenta creada, inicia sesión.");
+      nav("/login");
+    } catch (err) {
+      console.error("register()", err.code || err);
+      alert(err.message || "Error creando la cuenta.");
     }
-    users.push({ ...form, role: "user", blocked: false });
-    await saveUsers(users);                // guardamos local + Firestore
-    alert("Cuenta creada, inicia sesión.");
-    nav("/login");
   };
 
   return (
@@ -919,17 +937,27 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const users = await loadUsers();      // ahora esperamos la descarga/caché
-    const found = users.find(
-      (u) => u.email === form.email && u.password === form.password
-    );
-    if (found && found.blocked) {
-      return alert("Cuenta bloqueada. Contacte con soporte.");
+    try {
+      // 1‑ login Firebase Auth
+      await signInWithEmailAndPassword(auth, form.email, form.password);
+
+      // 2‑ obtenemos la lista ya con permisos
+      const users = await loadUsers();
+      const found = users.find(u => u.email === form.email);
+
+      if (found && found.blocked) {
+        return alert("Cuenta bloqueada. Contacte con soporte.");
+      }
+      if (!found) {
+        return alert("Credenciales incorrectas");
+      }
+      login(found);
+      alert(`Bienvenido ${found.role === "admin" ? "administrador" : "usuario"}`);
+      navigate("/");
+    } catch (err) {
+      console.error("login()", err.code || err);
+      alert("Credenciales incorrectas");
     }
-    if (!found) return alert("Credenciales incorrectas");
-    login(found);
-    alert(`Bienvenido ${found.role === "admin" ? "administrador" : "usuario"}`);
-    navigate("/");
   };
 
   return (
