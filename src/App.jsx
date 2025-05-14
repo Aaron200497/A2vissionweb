@@ -16,13 +16,13 @@ import {
 
 // ⬇️ Rellena con las claves reales de tu proyecto en Firebase Console
 const firebaseConfig = {
-   apiKey: "AIzaSyACuVKmVc7xS4K5TVljAeQTq7WNP_UC8n0",
-  authDomain: "a2vissionweb.firebaseapp.com",
-  projectId: "a2vissionweb",
-  storageBucket: "a2vissionweb.firebasestorage.app",
-  messagingSenderId: "127311201904",
-  appId: "1:127311201904:web:1b3bc95feb069bdc7d56b5",
-  measurementId: "G-25MGLNYKEL"
+    apiKey: "AIzaSyACuVKmVc7xS4K5TVljAeQTq7WNP_UC8n0",
+    authDomain: "a2vissionweb.firebaseapp.com",
+    projectId: "a2vissionweb",
+    storageBucket: "a2vissionweb.appspot.com",
+    messagingSenderId: "127311201904",
+    appId: "1:127311201904:web:1b3bc95feb069bdc7d56b5",
+    measurementId: "G-25MGLNYKEL"
 };
 
 // Inicializa solo una vez
@@ -346,8 +346,7 @@ function NavBar() {
   const navigate = useNavigate();
   useEffect(() => {
     if (user && user.role !== "admin") {
-      const reqs = loadRequests();
-      setHasUnread(reqs.some(r => r.unread));
+      loadRequests().then(rs => setHasUnread(rs.some(r => r.unread)));
     }
   }, [user]);
 
@@ -1077,7 +1076,7 @@ function ProgressLine({ step, onClickStep }) {
 }
 
 function UserRequests() {
-  const [reqs, setReqs] = useState(loadRequests());
+  const [reqs, setReqs] = useState([]);
   const [showDetailsUser, setShowDetailsUser] = useState({});
   const [userReplyMap, setUserReplyMap] = useState({});
 
@@ -1130,8 +1129,8 @@ function UserRequests() {
   };
 
   useEffect(() => {
-    // Listen for updates (e.g., from admin panel)
-    const int = setInterval(() => setReqs(loadRequests()), 1000);
+    loadRequests().then(setReqs);
+    const int = setInterval(() => loadRequests().then(setReqs), 1000);
     return () => clearInterval(int);
   }, []);
 
@@ -1354,7 +1353,7 @@ function MySubscriptions() {
 function AdminPanel() {
   const { user } = useAuth();
   const isAdmin = user && user.role === "admin";
-  const [reqs, setReqs] = useState(loadRequests());
+  const [reqs, setReqs] = useState([]);
   const [view, setView] = useState('requests');
   const [emailAdmin, setEmailAdmin] = useState("");
   const [msgMap, setMsgMap] = useState({});
@@ -1364,9 +1363,14 @@ function AdminPanel() {
   const [subEmail, setSubEmail] = useState('');
   const [subPlan, setSubPlan] = useState(APP_PLANS[0].slug);
 
-  // recargar cada vez que vuelvo a la vista
-  React.useEffect(() => {
-    const int = setInterval(() => setReqs(loadRequests()), 1000);
+  // carga inicial asíncrona
+  useEffect(() => {
+    loadRequests().then(setReqs);
+  }, []);
+  useEffect(() => {
+    const int = setInterval(() => {
+      loadRequests().then(setReqs);
+    }, 1000);
     return () => clearInterval(int);
   }, []);
 
