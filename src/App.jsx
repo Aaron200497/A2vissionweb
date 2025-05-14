@@ -13,8 +13,7 @@ import {
   setDoc,
   doc,
   updateDoc,
-  onSnapshot,
-  deleteDoc
+  onSnapshot
 } from "firebase/firestore";
 
 // Firebase Auth helpers
@@ -22,7 +21,8 @@ import {
   auth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  deleteDoc          // 🔑 ahora viene desde nuestro wrapper
 } from "./firebase";
 
 // ⬇️ Rellena con las claves reales de tu proyecto en Firebase Console
