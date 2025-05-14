@@ -2,6 +2,32 @@ import React, { useState, useRef, useEffect, useContext, createContext } from "r
 import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
+/*──────────────────────────
+  Firebase
+──────────────────────────*/
+import { initializeApp } from "firebase/app";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  setDoc,
+  doc
+} from "firebase/firestore";
+
+// ⬇️ Rellena con las claves reales de tu proyecto en Firebase Console
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_AUTH_DOMAIN",
+  projectId: "TU_PROJECT_ID",
+  storageBucket: "TU_STORAGE_BUCKET",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+// Inicializa solo una vez
+const appFB  = initializeApp(firebaseConfig);
+const db     = getFirestore(appFB);
+
 // ───────────── Simple localStorage auth (demo) ─────────────
 const ADMIN_ACCOUNT = {
   email: "website@a2vission.com",
@@ -9,16 +35,25 @@ const ADMIN_ACCOUNT = {
   role: "admin",
   blocked: false,
 };
-function loadUsers() {
-  const stored = JSON.parse(localStorage.getItem("users") || "[]");
-  if (!stored.find((u) => u.email === ADMIN_ACCOUNT.email)) {
-    stored.push(ADMIN_ACCOUNT);
-    localStorage.setItem("users", JSON.stringify(stored));
+// Descarga todos los usuarios de Firestore y los deja cacheados en localStorage
+async function loadUsers() {
+  const snap = await getDocs(collection(db, "users"));
+  const list = snap.docs.map(d => d.data());
+
+  // si aún no existe el admin por defecto, añádelo localmente
+  if (!list.find(u => u.email === ADMIN_ACCOUNT.email)) {
+    list.push(ADMIN_ACCOUNT);
   }
-  return stored;
-}
-function saveUsers(list) {
   localStorage.setItem("users", JSON.stringify(list));
+  return list;
+}
+async function saveUsers(list) {
+  // guarda local
+  localStorage.setItem("users", JSON.stringify(list));
+  // sincroniza remoto
+  for (const u of list) {
+    await setDoc(doc(db, "users", u.email), u);
+  }
 }
 
 
@@ -135,20 +170,39 @@ const steps = [
     "Finalización",
   ];
 /* Almacenamos solicitudes en localStorage para la demo */
-function loadRequests() {
-  return JSON.parse(localStorage.getItem("requests") || "[]");
-}
-function saveRequests(list) {
+async function loadRequests() {
+  const snap = await getDocs(collection(db, "requests"));
+  const list = snap.docs.map(d => d.data());
   localStorage.setItem("requests", JSON.stringify(list));
+  return list;
 }
-function loadSubscriptions() {
-  return JSON.parse(localStorage.getItem("subscriptions") || "[]");
+async function saveRequests(list) {
+  localStorage.setItem("requests", JSON.stringify(list));
+  for (const r of list) {
+    await setDoc(doc(db, "requests", r.id), r);
+  }
 }
-function saveSubscriptions(list) {
+async function loadSubscriptions() {
+  const snap = await getDocs(collection(db, "subscriptions"));
+  const list = snap.docs.map(d => d.data());
   localStorage.setItem("subscriptions", JSON.stringify(list));
+  return list;
+}
+async function saveSubscriptions(list) {
+  localStorage.setItem("subscriptions", JSON.stringify(list));
+  for (const s of list) {
+    await setDoc(doc(db, "subscriptions", s.id), s);
+  }
 }
 
 const RECOMMENDED = [APP_PLANS[0], WEB_PLANS[0]];
+
+// Carga inicial: sincroniza Firestore -> localStorage (solo una vez al abrir)
+Promise.all([
+  loadUsers(),
+  loadRequests(),
+  loadSubscriptions()
+]).catch(err => console.error("🔥 Firebase sync", err));
 
 /*──────────────────────────
   Root
