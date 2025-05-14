@@ -11,14 +11,19 @@ import {
   collection,
   getDocs,
   setDoc,
-  doc
+  doc,
+  updateDoc,
+  onSnapshot,
+  deleteDoc
 } from "firebase/firestore";
 
 // Firebase Auth helpers
 import {
   auth,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  deleteDoc
 } from "./firebase";
 
 // ⬇️ Rellena con las claves reales de tu proyecto en Firebase Console
@@ -904,7 +909,11 @@ function Register() {
       nav("/login");
     } catch (err) {
       console.error("register()", err.code || err);
-      alert(err.message || "Error creando la cuenta.");
+      if (err.code === "auth/email-already-in-use") {
+        alert("Ese correo ya está registrado. Pulsa en '¿Olvidaste contraseña?' para restablecerla o inicia sesión.");
+      } else {
+        alert(err.message || "Error creando la cuenta.");
+      }
     }
   };
 
@@ -920,6 +929,21 @@ function Register() {
         <input name="address" required placeholder="Dirección" value={form.address} onChange={handle} className="w-full border rounded p-2" />
         <button className="w-full bg-sky-600 text-white rounded py-2">Registrarse</button>
       </form>
+      <p className="text-xs text-center mt-2">
+        ¿Olvidaste la contraseña?&nbsp;
+        <button
+          type="button"
+          onClick={() => {
+            if (!form.email) return alert("Introduce tu email arriba.");
+            sendPasswordResetEmail(auth, form.email)
+              .then(() => alert("Se ha enviado un correo para restablecer la contraseña."))
+              .catch(e => alert(e.message));
+          }}
+          className="text-sky-600 underline"
+        >
+          Restablecer
+        </button>
+      </p>
     </section>
   );
 }
@@ -941,22 +965,31 @@ function Login() {
       // 1‑ login Firebase Auth
       await signInWithEmailAndPassword(auth, form.email, form.password);
 
-      // 2‑ obtenemos la lista ya con permisos
-      const users = await loadUsers();
-      const found = users.find(u => u.email === form.email);
-
-      if (found && found.blocked) {
-        return alert("Cuenta bloqueada. Contacte con soporte.");
-      }
+      // 2‑ asegura que exista ficha en Firestore / localStorage
+      let users = await loadUsers();
+      let found  = users.find(u => u.email === form.email);
       if (!found) {
-        return alert("Credenciales incorrectas");
+        found = {
+          email: form.email,
+          role: "user",
+          blocked: false,
+          phone: "",
+          name: "",
+          lastname: "",
+          address: ""
+        };
+        users.push(found);
+        await saveUsers(users);
+      }
+      if (found.blocked) {
+        return alert("Cuenta bloqueada. Contacte con soporte.");
       }
       login(found);
       alert(`Bienvenido ${found.role === "admin" ? "administrador" : "usuario"}`);
       navigate("/");
     } catch (err) {
       console.error("login()", err.code || err);
-      alert("Credenciales incorrectas");
+      alert(err.message || "Credenciales incorrectas");
     }
   };
 
@@ -987,6 +1020,21 @@ function Login() {
             Entrar
           </button>
         </form>
+        <p className="text-xs text-center mt-2">
+          ¿Olvidaste la contraseña?&nbsp;
+          <button
+            type="button"
+            onClick={() => {
+              if (!form.email) return alert("Introduce tu email arriba.");
+              sendPasswordResetEmail(auth, form.email)
+                .then(() => alert("Se ha enviado un correo de recuperación."))
+                .catch(e => alert(e.message));
+            }}
+            className="text-sky-600 underline"
+          >
+            Restablecer
+          </button>
+        </p>
         <p className="text-sm text-center mt-4">
           ¿No tienes cuenta?{" "}
           <Link to="/register" className="text-sky-600 hover:underline">
@@ -1700,21 +1748,41 @@ function AdminPanel() {
       loadUsers().then(setList).catch(console.error);
     }, []);
 
-    const saveAndRefresh = async (arr) => {
-      await saveUsers(arr);
-      setList(arr);
-    };
+    useEffect(() => {
+      // Suscripción en tiempo real a la colección de usuarios
+      const unsub = onSnapshot(collection(db, "users"), snap => {
+        const arr = snap.docs.map(d => d.data());
+        // Fallback por si Firestore estuviera vacío
+        if (arr.length === 0) {
+          const cached = JSON.parse(localStorage.getItem("users") || "[]");
+          setList(cached);
+        } else {
+          localStorage.setItem("users", JSON.stringify(arr));
+          setList(arr);
+        }
+      }, err => console.error("onSnapshot users", err));
+      return () => unsub();
+    }, []);
 
     const toggleBlock = async (email) => {
-      const updated = list.map(u =>
-        u.email === email ? { ...u, blocked: !u.blocked } : u
-      );
-      await saveAndRefresh(updated);
+      try {
+        await updateDoc(doc(db, "users", email), {
+          blocked: !list.find(u => u.email === email)?.blocked
+        });
+      } catch (e) {
+        console.error(e);
+        alert("No se pudo cambiar el estado de bloqueo");
+      }
     };
 
     const deleteUser = async (email) => {
-      const filtered = list.filter(u => u.email !== email);
-      await saveAndRefresh(filtered);
+      if (!window.confirm("¿Eliminar usuario?")) return;
+      try {
+        await deleteDoc(doc(db, "users", email));
+      } catch (e) {
+        console.error(e);
+        alert("No se pudo eliminar");
+      }
     };
 
     const filtered = list.filter(u =>
