@@ -63,12 +63,28 @@ async function loadUsers() {
     return JSON.parse(localStorage.getItem("users") || "[]");
   }
 }
-async function saveUsers(list) {
-  // guarda local
+async function saveUsers(list, isAdmin = false) {
+  // 1‑ Siempre sincronizamos la copia local para que la UI funcione offline
   localStorage.setItem("users", JSON.stringify(list));
-  // sincroniza remoto
-  for (const u of list) {
-    await setDoc(doc(db, "users", u.email), u);
+
+  /* 2‑ Reglas de seguridad (Firestore):
+        - Los usuarios normales solo pueden escribir en su propio documento
+        - Un administrador (claim custom admin == true) puede escribir cualquiera
+     Para evitar el error “Missing or insufficient permissions” durante el
+     registro de un usuario normal, enviamos a Firestore únicamente los
+     documentos permitidos.
+  */
+  if (isAdmin) {
+    // El panel admin puede modificar cualquier usuario
+    for (const u of list) {
+      await setDoc(doc(db, "users", u.email), u, { merge: true });
+    }
+  } else if (auth.currentUser) {
+    // Usuario corriente → solo puede grabar su propia ficha
+    const me = list.find(u => u.email === auth.currentUser.email);
+    if (me) {
+      await setDoc(doc(db, "users", me.email), me, { merge: true });
+    }
   }
 }
 
@@ -1534,7 +1550,7 @@ function AdminPanel() {
     const users = loadUsers().map((u) =>
       u.email === emailAdmin ? { ...u, role: "admin" } : u
     );
-    saveUsers(users);
+    saveUsers(users, true);
     alert("Usuario marcado como administrador (localStorage).");
     setEmailAdmin("");
   };
