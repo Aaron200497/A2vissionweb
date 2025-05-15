@@ -1816,20 +1816,29 @@ function AdminPanel() {
   function UsersPanel() {
     const [search, setSearch] = useState("");
     const [list, setList] = useState([]);
+    const listRef = useRef([]);
     useEffect(() => {
       loadUsers().then(setList).catch(console.error);
     }, []);
 
     useEffect(() => {
-        const unsub = onSnapshot(collection(db, "users"), snap => {
+      const unsub = onSnapshot(
+        collection(db, "users"),
+        snap => {
           const arr = snap.docs.map(d => d.data());
-          if (arr.length > 0) {                // evita parpadeo cuando llegan 0 docs
+          if (arr.length === 0) return; // ignora el primer ping vacío
+
+          // evita parpadeo: solo actualiza si hubo cambios reales
+          if (JSON.stringify(arr) !== JSON.stringify(listRef.current)) {
             localStorage.setItem("users", JSON.stringify(arr));
+            listRef.current = arr;
             setList(arr);
           }
-        }, err => console.error("onSnapshot users", err));
-        return () => unsub();
-      }, []);
+        },
+        err => console.error("onSnapshot users", err)
+      );
+      return () => unsub();
+    }, []);
 
     const toggleBlock = async (email) => {
       try {
