@@ -487,6 +487,7 @@ const MobileLink = ({ to, onClick, children }) => (
   Utilidades
 ──────────────────────────*/
 function PaymentCard({ plan }) {
+  const { user } = useAuth();
   return (
     <div className="border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
       <h4 className="text-lg font-semibold mb-2">{plan.name}</h4>
@@ -500,12 +501,21 @@ function PaymentCard({ plan }) {
         Ver detalles
       </Link>
       {/* Existing request button */}
-      <Link
-        to={`/solicitar/${plan.slug}`}
-        className="mt-2 py-2 bg-sky-600 text-white rounded-md text-center hover:bg-sky-700"
-      >
-        Solicitar aquí
-      </Link>
+      {user ? (
+        <Link
+          to={`/solicitar/${plan.slug}`}
+          className="mt-2 py-2 bg-sky-600 text-white rounded-md text-center hover:bg-sky-700"
+        >
+          Solicitar aquí
+        </Link>
+      ) : (
+        <Link
+          to="/login"
+          className="mt-2 py-2 bg-slate-300 text-slate-600 rounded-md text-center hover:bg-slate-400"
+        >
+          Inicia sesión para solicitar
+        </Link>
+      )}
     </div>
   );
 }
@@ -637,6 +647,7 @@ function Plans() {
 
 function RequestForm() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { slug } = useParams();
   const [formData, setFormData] = useState({
     email: user?.email || "",
@@ -648,6 +659,13 @@ function RequestForm() {
   const [sent, setSent] = useState(false);
   const formRef = useRef(null);
   const plan = ALL_PLANS.find(p => p.slug === slug);
+
+  // Si el usuario no ha iniciado sesión, redirige a /login
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
 
   if (!plan) {
     return (
@@ -667,7 +685,7 @@ function RequestForm() {
   const TEMPLATE_ID = TEMPLATE_REPLY;
   const PUBLIC_KEY  = EMAIL_PUBLIC_KEY;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     // Generar número de ticket de 6 dígitos
@@ -680,44 +698,40 @@ function RequestForm() {
     ticketInput.value = ticket;
     formRef.current.appendChild(ticketInput);
 
-    // 1) Auto‑reply al cliente  (formRef contiene todos los campos)
-    emailjs
-      .sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, PUBLIC_KEY)
-      .then(() => {
-        // 2) Notificación interna con un segundo template
-        const adminParams = {
-          ticket,   // usado también en el auto‑reply
-          plan: plan.name,
-          email: formData.email,
-          phone: formData.phone,
-          name: formData.name,
-          lastname: formData.lastname,
-          message: formData.message,
-        };
-        return emailjs.send(SERVICE_ID, TEMPLATE_ADMIN, adminParams, PUBLIC_KEY);
-      })
-      .then(() => {
-        // guardar en localStorage para que el admin la vea
-        const requests = loadRequests();
-        requests.push({
-          id: Date.now().toString(),
-          ticket,                // número visible
-          plan: plan.slug,
-          userEmail: formData.email,
-          phone: formData.phone,
-          name: formData.name,
-          lastname: formData.lastname,
-          message: formData.message,
-          step: 0,
-          details: {},           // initialize details map for per-step storage
-        });
-        saveRequests(requests);
-        setSent(true);
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Error exacto: " + (err?.text || err));
+    try {
+      // 1) Auto‑reply al cliente  (formRef contiene todos los campos)
+      await emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, PUBLIC_KEY);
+      // 2) Notificación interna con un segundo template
+      const adminParams = {
+        ticket,   // usado también en el auto‑reply
+        plan: plan.name,
+        email: formData.email,
+        phone: formData.phone,
+        name: formData.name,
+        lastname: formData.lastname,
+        message: formData.message,
+      };
+      await emailjs.send(SERVICE_ID, TEMPLATE_ADMIN, adminParams, PUBLIC_KEY);
+      // guardar en Firestore + localStorage para que el admin la vea
+      const requests = await loadRequests();
+      requests.push({
+        id: Date.now().toString(),
+        ticket,                // número visible
+        plan: plan.slug,
+        userEmail: formData.email,
+        phone: formData.phone,
+        name: formData.name,
+        lastname: formData.lastname,
+        message: formData.message,
+        step: 0,
+        details: {},           // initialize details map for per-step storage
       });
+      saveRequests(requests);
+      setSent(true);
+    } catch (err) {
+      console.error(err);
+      alert("Error exacto: " + (err?.text || err));
+    }
   }
 
   return (
