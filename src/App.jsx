@@ -336,6 +336,8 @@ export default function App() {
               <Route path="/planes/:slug" element={<PlanDetail />} />
               <Route path="/solicitar/:slug" element={<RequestForm />} />
               <Route path="/admin" element={<AdminPanel />} />
+              {/* AI sandbox route */}
+              <Route path="/ai-test" element={<AiTest />} />
               {/* Legal routes */}
               <Route path="/terms"   element={<LegalTerms />}   />
               <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -377,6 +379,10 @@ function NavBar() {
           <NavLink to="/">Inicio</NavLink>
           <NavLink to="/planes">Planes y precios</NavLink>
           <NavLink to="/contacto">Contacto</NavLink>
+          {/* IA link */}
+          {user && user.role === "admin"
+            ? <NavLink to="/ai-test">IA&nbsp;(beta)</NavLink>
+            : <span className="text-slate-400 select-none">IA&nbsp;(próximamente)</span>}
           {user && user.role === "admin" && <NavLink to="/admin">Panel admin</NavLink>}
           {!user && <NavLink to="/login">Inicio de sesión</NavLink>}
           {user && user.role !== "admin" && (
@@ -422,6 +428,10 @@ function NavBar() {
           <MobileLink to="/" onClick={() => {setOpen(false);}}>Inicio</MobileLink>
           <MobileLink to="/planes" onClick={() => setOpen(false)}>Planes y precios</MobileLink>
           <MobileLink to="/contacto" onClick={() => setOpen(false)}>Contacto</MobileLink>
+          {/* IA link mobile */}
+          {user && user.role === "admin"
+            ? <MobileLink to="/ai-test" onClick={() => setOpen(false)}>IA&nbsp;(beta)</MobileLink>
+            : <span className="block px-4 py-3 text-sm text-slate-400">IA&nbsp;(próximamente)</span>}
           {user && user.role === "admin" && (
             <MobileLink to="/admin" onClick={() => setOpen(false)}>Panel admin</MobileLink>
           )}
@@ -1672,28 +1682,6 @@ function AdminPanel() {
           </div>
         </div>
 
-        {/* Asignar suscripción */}
-        <div className="border rounded p-4 space-y-2">
-          <h3 className="font-semibold">Asignar suscripción a usuario</h3>
-          <div className="flex space-x-2">
-            <input
-              type="email"
-              placeholder="Email del usuario"
-              value={subEmail}
-              onChange={e => setSubEmail(e.target.value)}
-              className="flex-1 border rounded p-2"
-            />
-            <select
-              value={subPlan}
-              onChange={e => setSubPlan(e.target.value)}
-              className="border rounded p-2"
-            >
-              {ALL_PLANS.map(p => <option key={p.slug} value={p.slug}>{p.name}</option>)}
-            </select>
-            <button onClick={assignSubscription} className="bg-sky-600 text-white px-4 rounded">Asignar</button>
-          </div>
-        </div>
-
         {/* Solicitudes */}
         <div className="space-y-4">
           <h3 className="font-semibold">Solicitudes</h3>
@@ -1835,26 +1823,26 @@ function AdminPanel() {
         return () => unsub();
       }, []);
 
-    const toggleBlock = async (email) => {
-      try {
-        await updateDoc(doc(db, "users", email), {
-          blocked: !list.find(u => u.email === email)?.blocked
-        });
-      } catch (e) {
-        console.error(e);
-        alert("No se pudo cambiar el estado de bloqueo");
-      }
-    };
+      const toggleBlock = async (email) => {
+        try {
+          await updateDoc(doc(db, "users", email), {
+            blocked: !list.find(u => u.email === email)?.blocked
+          });
+        } catch (e) {
+          console.error(e);
+          alert("No se pudo cambiar el estado de bloqueo");
+        }
+      };
 
-    const deleteUser = async (email) => {
-      if (!window.confirm("¿Eliminar usuario?")) return;
-      try {
-        await deleteDoc(doc(db, "users", email));
-      } catch (e) {
-        console.error(e);
-        alert("No se pudo eliminar");
-      }
-    };
+      const deleteUser = async (email) => {
+        if (!window.confirm("¿Eliminar usuario?")) return;
+        try {
+          await deleteDoc(doc(db, "users", email));
+        } catch (e) {
+          console.error(e);
+          alert("No se pudo eliminar");
+        }
+      };
 
       const [open, setOpen] = useState({});
       const filtered = list.filter(u =>
@@ -1865,6 +1853,14 @@ function AdminPanel() {
       const [reqs, setReqs] = useState([]);
       const [subs, setSubs] = useState([]);
       useEffect(() => { loadRequests().then(setReqs); loadSubscriptions().then(setSubs); }, []);
+
+      // Cancelar suscripción admin helper
+      const cancelSubAdmin = id => {
+        const list = loadSubscriptions().filter(s => s.id !== id);
+        saveSubscriptions(list);
+        setSubs(list);
+        alert("Suscripción cancelada");
+      };
 
       return (
         <div className="space-y-4">
@@ -1912,10 +1908,19 @@ function AdminPanel() {
               </div>
               {open[u.email] && (
                 <ul className="text-xs mt-1 pl-4 list-disc w-full md:w-auto">
-                  <li>Solicitudes: {reqs.filter(r=>r.userEmail===u.email).length}</li>
-                  <li>Suscripciones: {subs.filter(s=>s.email===u.email).length}</li>
                   <li>Tel: {u.phone || '-'}</li>
                   <li>Dirección: {u.address || '-'}</li>
+                  <li className="mt-1 font-semibold">Solicitudes:</li>
+                  {reqs.filter(r=>r.userEmail===u.email).map(r=>(
+                    <li key={r.id} className="ml-3 list-disc">{r.ticket} – {steps[r.step] || 'Rech.'}</li>
+                  ))}
+                  <li className="mt-1 font-semibold">Suscripciones:</li>
+                  {subs.filter(s=>s.email===u.email).map(s=>(
+                    <li key={s.id} className="ml-3 list-disc flex justify-between items-center">
+                      {ALL_PLANS.find(p=>p.slug===s.plan)?.name}
+                      <button onClick={()=>cancelSubAdmin(s.id)} className="text-red-500 text-xs ml-2">Cancelar</button>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
@@ -1927,6 +1932,16 @@ function AdminPanel() {
   // Subscriptions panel
   function SubscriptionsPanel() {
     const [subs, setSubs] = useState([]);
+    const [showModal,setShowModal]=useState(false);
+    const [email,setEmail]=useState('');
+    const [planSel,setPlanSel]=useState(ALL_PLANS[0].slug);
+    const openModal=()=>setShowModal(true);
+    const saveSub=()=>{
+      if(!email)return alert("Correo obligatorio");
+      const list=[...subs,{id:Date.now().toString(),email,plan:planSel,start:new Date().toISOString()}];
+      saveSubscriptions(list);
+      setSubs(list); setShowModal(false); setEmail(''); setPlanSel(ALL_PLANS[0].slug);
+    };
 
     useEffect(() => {
       loadSubscriptions().then(setSubs).catch(console.error);
@@ -1940,6 +1955,22 @@ function AdminPanel() {
 
     return (
       <div>
+        <button onClick={openModal} className="mb-4 bg-sky-600 text-white px-4 py-1 rounded">Nueva suscripción</button>
+        {showModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded space-y-3 w-80">
+              <h4 className="font-semibold text-lg">Asignar suscripción</h4>
+              <input type="email" placeholder="Email usuario" value={email} onChange={e=>setEmail(e.target.value)} className="w-full border p-2 rounded"/>
+              <select value={planSel} onChange={e=>setPlanSel(e.target.value)} className="w-full border p-2 rounded">
+                {ALL_PLANS.map(p=><option key={p.slug} value={p.slug}>{p.name}</option>)}
+              </select>
+              <div className="flex justify-end space-x-2">
+                <button onClick={()=>setShowModal(false)} className="px-3 py-1">Cancelar</button>
+                <button onClick={saveSub} className="bg-sky-600 text-white px-3 py-1 rounded">Guardar</button>
+              </div>
+            </div>
+          </div>
+        )}
         <h3 className="font-semibold">Suscripciones asignadas</h3>
         {subs.length === 0 && (
           <p className="text-sm text-slate-500">No hay suscripciones.</p>
@@ -1989,6 +2020,11 @@ function PlanDetail() {
     localStorage.getItem(storageKey) || (plan && plan.details)
   );
   const isAdmin = user?.role === 'admin';
+  // Imagen editable
+  const imgKey = `plan_img_${slug}`;
+  const visKey = `plan_img_vis_${slug}`;
+  const [img,setImg] = useState(localStorage.getItem(imgKey)||'');
+  const [visible,setVisible] = useState(localStorage.getItem(visKey)==="1");
 
   const saveConditions = () => {
     localStorage.setItem(storageKey, conditions);
@@ -2008,6 +2044,8 @@ function PlanDetail() {
     <section className="container mx-auto px-4 py-16 max-w-xl space-y-6">
       <h2 className="text-2xl font-bold">{plan.name}</h2>
       <p className="text-xl text-sky-600">{plan.price}</p>
+      {/* Imagen para usuarios */}
+      {img && visible && <img src={img} alt="plan" className="max-h-40 mb-4" />}
       <label className="block text-sm font-medium">Condiciones:</label>
       {isAdmin ? (
         <textarea
@@ -2020,12 +2058,31 @@ function PlanDetail() {
         <p className="text-sm text-slate-700 whitespace-pre-line">{conditions}</p>
       )}
       {isAdmin && (
-        <button
-          onClick={saveConditions}
-          className="mt-2 bg-green-600 text-white px-4 py-2 rounded"
-        >
-          Guardar condiciones
-        </button>
+        <>
+          <button
+            onClick={saveConditions}
+            className="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+          >
+            Guardar condiciones
+          </button>
+          <div className="space-y-2 mt-4">
+            <label className="block text-sm">Imagen del plan:</label>
+            {img && <img src={img} alt="plan" className="max-h-40 mb-2" />}
+            <input type="file" accept="image/*" onChange={e=>{
+              const f=e.target.files[0]; if(!f) return;
+              const r=new FileReader();
+              r.onload=ev=>{ setImg(ev.target.result); localStorage.setItem(imgKey,ev.target.result); };
+              r.readAsDataURL(f);
+            }}/>
+            <label className="inline-flex items-center">
+              <input type="checkbox" checked={visible} onChange={e=>{
+                setVisible(e.target.checked);
+                localStorage.setItem(visKey,e.target.checked?'1':'0');
+              }} className="mr-2"/>
+              Mostrar a usuarios
+            </label>
+          </div>
+        </>
       )}
       <Link
         to={`/solicitar/${slug}`}
@@ -2033,6 +2090,16 @@ function PlanDetail() {
       >
         Solicitar este plan
       </Link>
+    </section>
+  );
+}
+
+// AI Test route
+function AiTest() {
+  return (
+    <section className="container mx-auto px-4 py-16 text-center">
+      <h2 className="text-3xl font-bold mb-4">Laboratorio IA (solo admins)</h2>
+      <p className="text-slate-600">Aquí aparecerán las pruebas internas de la futura IA.</p>
     </section>
   );
 }
