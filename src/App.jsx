@@ -1146,7 +1146,6 @@ function Profile() {
 
   return (
     <section className="container mx-auto px-4 py-16 max-w-md space-y-6">
-      {form.banner && <img src={form.banner} alt="banner" className="w-full h-32 object-cover rounded" />}
       <div className="-mt-12 mb-4 text-center">
         {form.avatar
           ? <img src={form.avatar} alt="avatar" className="w-24 h-24 rounded-full border-4 border-white mx-auto" />
@@ -1159,27 +1158,28 @@ function Profile() {
         <input name="name" value={form.name} onChange={handle} placeholder="Nombre" className="w-full border rounded p-2" />
         <input name="lastname" value={form.lastname} onChange={handle} placeholder="Apellidos" className="w-full border rounded p-2" />
         <input name="address" value={form.address} onChange={handle} placeholder="Dirección" className="w-full border rounded p-2" />
-        <input type="file" accept="image/*"
-          onChange={e => {
-            const f = e.target.files[0];
-            if (!f) return;
-            const r = new FileReader();
+        <button onClick={save} className="w-full bg-sky-600 text-white rounded py-2">Guardar cambios</button>
+        {/* selector de foto de perfil */}
+        <input
+            id="avatarInput"
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={e => {
+                const f = e.target.files[0];
+                if (!f) return;
+                const r = new FileReader();
             r.onload = ev => setForm({ ...form, avatar: ev.target.result });
             r.readAsDataURL(f);
-          }}
-          className="w-full border rounded p-2"
+             }}
         />
-        <input type="file" accept="image/*"
-          onChange={e => {
-            const f = e.target.files[0];
-            if (!f) return;
-            const r = new FileReader();
-            r.onload = ev => setForm({ ...form, banner: ev.target.result });
-            r.readAsDataURL(f);
-          }}
-          className="w-full border rounded p-2"
-        />
-        <button onClick={save} className="w-full bg-sky-600 text-white rounded py-2">Guardar cambios</button>
+        <button
+            type="button"
+            onClick={() => document.getElementById('avatarInput').click()}
+            className="w-full bg-sky-600 text-white rounded py-2"
+        >
+        Cambiar foto de perfil
+            </button>
       </div>
 
       <div className="space-y-3">
@@ -1792,18 +1792,17 @@ function AdminPanel() {
                 )}
                 {(r.step !== 1 && r.step !== 2) && (
                   <input
-                    type="file"
-                    accept="*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => setFile(r.id, ev.target.result);
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="text-sm"
-                  />
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => setFile(r.id, ev.target.result);
+                    reader.readAsDataURL(file);
+                  }}
+                  className="text-sm"
+                />
                 )}
               </div>
             </div>
@@ -1822,20 +1821,15 @@ function AdminPanel() {
     }, []);
 
     useEffect(() => {
-      // Suscripción en tiempo real a la colección de usuarios
-      const unsub = onSnapshot(collection(db, "users"), snap => {
-        const arr = snap.docs.map(d => d.data());
-        // Fallback por si Firestore estuviera vacío
-        if (arr.length === 0) {
-          const cached = JSON.parse(localStorage.getItem("users") || "[]");
-          setList(cached);
-        } else {
-          localStorage.setItem("users", JSON.stringify(arr));
-          setList(arr);
-        }
-      }, err => console.error("onSnapshot users", err));
-      return () => unsub();
-    }, []);
+        const unsub = onSnapshot(collection(db, "users"), snap => {
+          const arr = snap.docs.map(d => d.data());
+          if (arr.length > 0) {                // evita parpadeo cuando llegan 0 docs
+            localStorage.setItem("users", JSON.stringify(arr));
+            setList(arr);
+          }
+        }, err => console.error("onSnapshot users", err));
+        return () => unsub();
+      }, []);
 
     const toggleBlock = async (email) => {
       try {
