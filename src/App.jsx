@@ -5,16 +5,22 @@ import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } fro
 /*──────────────────────────
   Firebase
 ──────────────────────────*/
-import { initializeApp } from "firebase/app";
+// Firebase helpers + db instance
 import {
-  getFirestore,
+  db,
   collection,
   getDocs,
   setDoc,
   doc,
   updateDoc,
-  onSnapshot
-} from "firebase/firestore";
+  onSnapshot,
+  auth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  deleteDoc
+} from "./firebase";
 
 // Firebase Auth helpers
 import {
@@ -26,20 +32,6 @@ import {
   deleteDoc          // 🔑 ahora viene desde nuestro wrapper
 } from "./firebase";
 
-// ⬇️ Rellena con las claves reales de tu proyecto en Firebase Console
-const firebaseConfig = {
-    apiKey: "AIzaSyACuVKmVc7xS4K5TVljAeQTq7WNP_UC8n0",
-    authDomain: "a2vissionweb.firebaseapp.com",
-    projectId: "a2vissionweb",
-    storageBucket: "a2vissionweb.appspot.com",
-    messagingSenderId: "127311201904",
-    appId: "1:127311201904:web:1b3bc95feb069bdc7d56b5",
-    measurementId: "G-25MGLNYKEL"
-};
-
-// Inicializa solo una vez
-const appFB  = initializeApp(firebaseConfig);
-const db     = getFirestore(appFB);
 
 // ───────────── Simple localStorage auth (demo) ─────────────
 const ADMIN_ACCOUNT = {
