@@ -1161,25 +1161,34 @@ function Profile() {
         <button onClick={save} className="w-full bg-sky-600 text-white rounded py-2">Guardar cambios</button>
         {/* selector de foto de perfil */}
         <input
-            id="avatarInput"
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={e => {
-                const f = e.target.files[0];
-                if (!f) return;
-                const r = new FileReader();
-            r.onload = ev => setForm({ ...form, avatar: ev.target.result });
+          id="avatarInput"
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={e => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+              const updated = { ...form, avatar: ev.target.result };
+              setForm(updated);                               // UI
+              // persiste en localStorage y Firestore
+              const users = loadUsers().map(u =>
+                u.email === user.email ? { ...u, avatar: ev.target.result } : u
+              );
+              saveUsers(users);
+              login({ ...user, avatar: ev.target.result });   // contexto
+            };
             r.readAsDataURL(f);
-             }}
+          }}
         />
         <button
-            type="button"
-            onClick={() => document.getElementById('avatarInput').click()}
-            className="w-full bg-sky-600 text-white rounded py-2"
+          type="button"
+          onClick={() => document.getElementById('avatarInput').click()}
+          className="w-full bg-sky-600 text-white rounded py-2"
         >
-        Cambiar foto de perfil
-            </button>
+          Cambiar foto de perfil
+        </button>
       </div>
 
       <div className="space-y-3">
@@ -1657,7 +1666,7 @@ function AdminPanel() {
   }
 
   // Requests panel
-  function RequestsPanel() {
+    function RequestsPanel() {
     return (
       <div className="space-y-8">
         {/* Añadir admin */}
@@ -1790,8 +1799,7 @@ function AdminPanel() {
                     </button>
                   </>
                 )}
-                {(r.step !== 1 && r.step !== 2) && (
-                  <input
+                <input
                   type="file"
                   accept="image/*,application/pdf"
                   onChange={e => {
@@ -1801,9 +1809,8 @@ function AdminPanel() {
                     reader.onload = ev => setFile(r.id, ev.target.result);
                     reader.readAsDataURL(file);
                   }}
-                  className="text-sm"
+                  className="text-sm mt-2"
                 />
-                )}
               </div>
             </div>
           ))}
@@ -1813,32 +1820,37 @@ function AdminPanel() {
   }
 
   // Users panel
-  function UsersPanel() {
-    const [search, setSearch] = useState("");
-    const [list, setList] = useState([]);
-    const listRef = useRef([]);
-    useEffect(() => {
-      loadUsers().then(setList).catch(console.error);
-    }, []);
+    function UsersPanel() {
+      const [search, setSearch] = useState("");
+      const [list, setList] = useState([]);
+      const listRef = useRef([]);
+      useEffect(() => {
+        loadUsers()
+          .then(r => {
+            setList(r);
+            listRef.current = r;     // evita parpadeo inicial
+          })
+          .catch(console.error);
+      }, []);
 
-    useEffect(() => {
-      const unsub = onSnapshot(
-        collection(db, "users"),
-        snap => {
-          const arr = snap.docs.map(d => d.data());
-          if (arr.length === 0) return; // ignora el primer ping vacío
+      useEffect(() => {
+        const unsub = onSnapshot(
+          collection(db, "users"),
+          snap => {
+            const arr = snap.docs.map(d => d.data());
+            if (arr.length === 0) return; // ignora el primer ping vacío
 
-          // evita parpadeo: solo actualiza si hubo cambios reales
-          if (JSON.stringify(arr) !== JSON.stringify(listRef.current)) {
-            localStorage.setItem("users", JSON.stringify(arr));
-            listRef.current = arr;
-            setList(arr);
-          }
-        },
-        err => console.error("onSnapshot users", err)
-      );
-      return () => unsub();
-    }, []);
+            // evita parpadeo: solo actualiza si hubo cambios reales
+            if (JSON.stringify(arr) !== JSON.stringify(listRef.current)) {
+              localStorage.setItem("users", JSON.stringify(arr));
+              listRef.current = arr;
+              setList(arr);
+            }
+          },
+          err => console.error("onSnapshot users", err)
+        );
+        return () => unsub();
+      }, []);
 
     const toggleBlock = async (email) => {
       try {
@@ -1861,73 +1873,73 @@ function AdminPanel() {
       }
     };
 
-    const [open, setOpen] = useState({});
-    const filtered = list.filter(u =>
-      u.email.toLowerCase().includes(search.toLowerCase())
-    );
+      const [open, setOpen] = useState({});
+      const filtered = list.filter(u =>
+        u.email.toLowerCase().includes(search.toLowerCase())
+      );
 
-    // For requests and subs info
-    const [reqs, setReqs] = useState([]);
-    const [subs, setSubs] = useState([]);
-    useEffect(() => { loadRequests().then(setReqs); loadSubscriptions().then(setSubs); }, []);
+      // For requests and subs info
+      const [reqs, setReqs] = useState([]);
+      const [subs, setSubs] = useState([]);
+      useEffect(() => { loadRequests().then(setReqs); loadSubscriptions().then(setSubs); }, []);
 
-    return (
-      <div className="space-y-4">
-        <h3 className="font-semibold">Usuarios registrados</h3>
+      return (
+        <div className="space-y-4">
+          <h3 className="font-semibold">Usuarios registrados</h3>
 
-        <input
-          type="text"
-          placeholder="Buscar correo…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="border rounded p-2 w-full md:w-80"
-        />
+          <input
+            type="text"
+            placeholder="Buscar correo…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="border rounded p-2 w-full md:w-80"
+          />
 
-        {filtered.length === 0 && (
-          <p className="text-sm text-slate-500">Sin resultados.</p>
-        )}
+          {filtered.length === 0 && (
+            <p className="text-sm text-slate-500">Sin resultados.</p>
+          )}
 
-        {filtered.map(u => (
-          <div
-            key={u.email}
-            className="flex flex-col md:flex-row md:items-center md:justify-between border rounded p-2 mt-2"
-          >
-            <span>
-              {u.email} ({u.role}) {u.blocked && <span className="text-red-600">(bloqueado)</span>}
-            </span>
-            <div className="space-x-2 mt-2 md:mt-0">
-              <button
-                onClick={() => toggleBlock(u.email)}
-                className={`px-2 py-1 rounded text-white ${u.blocked ? "bg-green-600" : "bg-yellow-600"}`}
-              >
-                {u.blocked ? "Desbloquear" : "Bloquear"}
-              </button>
-              <button
-                onClick={() => deleteUser(u.email)}
-                className="px-2 py-1 rounded bg-red-600 text-white"
-              >
-                Eliminar
-              </button>
-              <button
-                onClick={() => setOpen({ ...open, [u.email]: !open[u.email] })}
-                className="px-2 py-1 rounded bg-blue-600 text-white"
-              >
-                Detalles
-              </button>
+          {filtered.map(u => (
+            <div
+              key={u.email}
+              className="flex flex-col md:flex-row md:items-center md:justify-between border rounded p-2 mt-2"
+            >
+              <span>
+                {u.email} ({u.role}) {u.blocked && <span className="text-red-600">(bloqueado)</span>}
+              </span>
+              <div className="space-x-2 mt-2 md:mt-0">
+                <button
+                  onClick={() => toggleBlock(u.email)}
+                  className={`px-2 py-1 rounded text-white ${u.blocked ? "bg-green-600" : "bg-yellow-600"}`}
+                >
+                  {u.blocked ? "Desbloquear" : "Bloquear"}
+                </button>
+                <button
+                  onClick={() => deleteUser(u.email)}
+                  className="px-2 py-1 rounded bg-red-600 text-white"
+                >
+                  Eliminar
+                </button>
+                <button
+                  onClick={() => setOpen({ ...open, [u.email]: !open[u.email] })}
+                  className="px-2 py-1 rounded bg-blue-600 text-white"
+                >
+                  Detalles
+                </button>
+              </div>
+              {open[u.email] && (
+                <ul className="text-xs mt-1 pl-4 list-disc w-full md:w-auto">
+                  <li>Solicitudes: {reqs.filter(r=>r.userEmail===u.email).length}</li>
+                  <li>Suscripciones: {subs.filter(s=>s.email===u.email).length}</li>
+                  <li>Tel: {u.phone || '-'}</li>
+                  <li>Dirección: {u.address || '-'}</li>
+                </ul>
+              )}
             </div>
-            {open[u.email] && (
-              <ul className="text-xs mt-1 pl-4 list-disc w-full md:w-auto">
-                <li>Solicitudes: {reqs.filter(r=>r.userEmail===u.email).length}</li>
-                <li>Suscripciones: {subs.filter(s=>s.email===u.email).length}</li>
-                <li>Tel: {u.phone || '-'}</li>
-                <li>Dirección: {u.address || '-'}</li>
-              </ul>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
+          ))}
+        </div>
+      );
+    }
 
   // Subscriptions panel
   function SubscriptionsPanel() {
