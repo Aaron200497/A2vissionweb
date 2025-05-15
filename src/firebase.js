@@ -16,7 +16,9 @@ import {
   setDoc,
   updateDoc,
   onSnapshot,
-  deleteDoc
+  deleteDoc,
+  query,
+  where
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -46,5 +48,7 @@ export {
   setDoc,
   updateDoc,
   onSnapshot,
-  deleteDoc
+  deleteDoc,
+  query,
+  where
 };
