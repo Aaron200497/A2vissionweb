@@ -1435,6 +1435,9 @@ function Footer() {
 
         <LegalLinks />
       </div>
+      <p className="w-full text-center text-xs text-slate-500 mt-4">
+        ©️ 2025 Desarrollado y Diseñado por A² Vission
+      </p>
     </footer>
   );
 }
