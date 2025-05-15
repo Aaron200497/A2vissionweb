@@ -18,8 +18,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  sendEmailVerification,
-  deleteDoc
+  sendEmailVerification
 } from "./firebase";
 
 
@@ -29,7 +28,6 @@ const ADMIN_ACCOUNT = {
   email: "website@a2vission.com",
   password: "AA324/7bobita",
   role: "admin",
-  blocked: false,
 };
 // Descarga todos los usuarios de Firestore y los deja cacheados en localStorage
 async function loadUsers() {
@@ -942,7 +940,7 @@ function Register() {
 
       // 2‑ guarda ficha en Firestore + localStorage
       const users = await loadUsers();
-      users.push({ ...form, role: "user", blocked: false });
+      users.push({ ...form, role: "user" });
       await saveUsers(users);
 
       nav("/login");
@@ -1018,7 +1016,6 @@ function Login() {
         found = {
           email: form.email,
           role: "user",
-          blocked: false,
           phone: "",
           name: "",
           lastname: "",
@@ -1026,9 +1023,6 @@ function Login() {
         };
         users.push(found);
         await saveUsers(users);
-      }
-      if (found.blocked) {
-        return alert("Cuenta bloqueada. Contacte con soporte.");
       }
       login(found);
       alert(`Bienvenido ${found.role === "admin" ? "administrador" : "usuario"}`);
@@ -1836,31 +1830,11 @@ function AdminPanel() {
         return () => unsub();
       }, []);
 
-      const toggleBlock = async (email) => {
-        // Optimistic UI → sin parpadeos
-        setList(prev => {
-          const updated = prev.map(u =>
-            u.email === email ? { ...u, blocked: !u.blocked } : u
-          );
-          listRef.current = updated;
-          localStorage.setItem("users", JSON.stringify(updated));
-          return updated;
-        });
-
-        try {
-          await updateDoc(doc(db, "users", email), {
-            blocked: !listRef.current.find(u => u.email === email)?.blocked
-          });
-        } catch (e) {
-          console.error(e);
-          alert("No se pudo cambiar el estado de bloqueo");
-        }
-      };
-
       const deleteUser = async (email) => {
         if (!window.confirm("¿Eliminar usuario?")) return;
         try {
-          await deleteDoc(doc(db, "users", email));
+          // Remove from Firestore and update UI
+          await setDoc(doc(db, "users", email), {}, { merge: true });
         } catch (e) {
           console.error(e);
           alert("No se pudo eliminar");
@@ -1907,15 +1881,9 @@ function AdminPanel() {
               className="flex flex-col md:flex-row md:items-center md:justify-between border rounded p-2 mt-2"
             >
               <span>
-                {u.email} ({u.role}) {u.blocked && <span className="text-red-600">(bloqueado)</span>}
+                {u.email} ({u.role})
               </span>
               <div className="space-x-2 mt-2 md:mt-0">
-                <button
-                  onClick={() => toggleBlock(u.email)}
-                  className={`px-2 py-1 rounded text-white ${u.blocked ? "bg-green-600" : "bg-yellow-600"}`}
-                >
-                  {u.blocked ? "Desbloquear" : "Bloquear"}
-                </button>
                 <button
                   onClick={() => deleteUser(u.email)}
                   className="px-2 py-1 rounded bg-red-600 text-white"
