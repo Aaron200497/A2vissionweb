@@ -22,6 +22,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  sendEmailVerification,
   deleteDoc          // 🔑 ahora viene desde nuestro wrapper
 } from "./firebase";
 
@@ -892,7 +893,8 @@ function Contact() {
 function Register() {
   const [form, setForm] = useState({
     email: "", password: "",
-    phone: "", name: "", lastname: "", address: ""
+    phone: "", name: "", lastname: "", address: "",
+    avatar: "", banner: ""
   });
   const nav = useNavigate();
 
@@ -915,12 +917,15 @@ function Register() {
       // 1‑ crea el usuario en Firebase Auth
       await createUserWithEmailAndPassword(auth, form.email, form.password);
 
+      // Envía verificación
+      await sendEmailVerification(auth.currentUser);
+      alert("Te hemos enviado un correo para verificar tu cuenta. Revisa tu bandeja e inicia sesión cuando esté verificado.");
+
       // 2‑ guarda ficha en Firestore + localStorage
       const users = await loadUsers();
       users.push({ ...form, role: "user", blocked: false });
       await saveUsers(users);
 
-      alert("Cuenta creada, inicia sesión.");
       nav("/login");
     } catch (err) {
       console.error("register()", err.code || err);
@@ -942,6 +947,24 @@ function Register() {
         <input name="name" required placeholder="Nombre" value={form.name} onChange={handle} className="w-full border rounded p-2" />
         <input name="lastname" required placeholder="Apellidos" value={form.lastname} onChange={handle} className="w-full border rounded p-2" />
         <input name="address" required placeholder="Dirección" value={form.address} onChange={handle} className="w-full border rounded p-2" />
+        <input type="file" accept="image/*"
+          onChange={e=>{
+            const f=e.target.files[0];
+            if(!f) return;
+            const r=new FileReader();
+            r.onload=ev=>setForm({...form,avatar:ev.target.result});
+            r.readAsDataURL(f);
+          }}
+          className="w-full border rounded p-2" />
+        <input type="file" accept="image/*"
+          onChange={e=>{
+            const f=e.target.files[0];
+            if(!f) return;
+            const r=new FileReader();
+            r.onload=ev=>setForm({...form,banner:ev.target.result});
+            r.readAsDataURL(f);
+          }}
+          className="w-full border rounded p-2" />
         <button className="w-full bg-sky-600 text-white rounded py-2">Registrarse</button>
       </form>
       <p className="text-xs text-center mt-2">
@@ -979,6 +1002,13 @@ function Login() {
     try {
       // 1‑ login Firebase Auth
       await signInWithEmailAndPassword(auth, form.email, form.password);
+
+      // Verifica email
+      if (!auth.currentUser.emailVerified) {
+        alert("Debes verificar tu correo antes de iniciar sesión.");
+        await auth.signOut();
+        return;
+      }
 
       // 2‑ asegura que exista ficha en Firestore / localStorage
       let users = await loadUsers();
@@ -1117,6 +1147,12 @@ function Profile() {
 
   return (
     <section className="container mx-auto px-4 py-16 max-w-md space-y-6">
+      {form.banner && <img src={form.banner} alt="banner" className="w-full h-32 object-cover rounded" />}
+      <div className="-mt-12 mb-4 text-center">
+        {form.avatar
+          ? <img src={form.avatar} alt="avatar" className="w-24 h-24 rounded-full border-4 border-white mx-auto" />
+          : <div className="w-24 h-24 rounded-full bg-slate-300 mx-auto" />}
+      </div>
       <h2 className="text-2xl font-bold text-center">Mi perfil</h2>
       <div className="space-y-3">
         <input value={form.email} disabled className="w-full border rounded p-2 bg-slate-100" />
@@ -1124,6 +1160,26 @@ function Profile() {
         <input name="name" value={form.name} onChange={handle} placeholder="Nombre" className="w-full border rounded p-2" />
         <input name="lastname" value={form.lastname} onChange={handle} placeholder="Apellidos" className="w-full border rounded p-2" />
         <input name="address" value={form.address} onChange={handle} placeholder="Dirección" className="w-full border rounded p-2" />
+        <input type="file" accept="image/*"
+          onChange={e => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => setForm({ ...form, avatar: ev.target.result });
+            r.readAsDataURL(f);
+          }}
+          className="w-full border rounded p-2"
+        />
+        <input type="file" accept="image/*"
+          onChange={e => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => setForm({ ...form, banner: ev.target.result });
+            r.readAsDataURL(f);
+          }}
+          className="w-full border rounded p-2"
+        />
         <button onClick={save} className="w-full bg-sky-600 text-white rounded py-2">Guardar cambios</button>
       </div>
 
@@ -1800,9 +1856,15 @@ function AdminPanel() {
       }
     };
 
+    const [open, setOpen] = useState({});
     const filtered = list.filter(u =>
       u.email.toLowerCase().includes(search.toLowerCase())
     );
+
+    // For requests and subs info
+    const [reqs, setReqs] = useState([]);
+    const [subs, setSubs] = useState([]);
+    useEffect(() => { loadRequests().then(setReqs); loadSubscriptions().then(setSubs); }, []);
 
     return (
       <div className="space-y-4">
@@ -1841,7 +1903,21 @@ function AdminPanel() {
               >
                 Eliminar
               </button>
+              <button
+                onClick={() => setOpen({ ...open, [u.email]: !open[u.email] })}
+                className="px-2 py-1 rounded bg-blue-600 text-white"
+              >
+                Detalles
+              </button>
             </div>
+            {open[u.email] && (
+              <ul className="text-xs mt-1 pl-4 list-disc w-full md:w-auto">
+                <li>Solicitudes: {reqs.filter(r=>r.userEmail===u.email).length}</li>
+                <li>Suscripciones: {subs.filter(s=>s.email===u.email).length}</li>
+                <li>Tel: {u.phone || '-'}</li>
+                <li>Dirección: {u.address || '-'}</li>
+              </ul>
+            )}
           </div>
         ))}
       </div>
