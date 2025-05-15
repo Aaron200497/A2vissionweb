@@ -33,17 +33,26 @@ const ADMIN_ACCOUNT = {
 };
 // Descarga todos los usuarios de Firestore y los deja cacheados en localStorage
 async function loadUsers() {
+  // 0‑ Si aún no hay ningún usuario autenticado devolvemos la copia en
+  //    localStorage para evitar “permission‑denied” y parpadeos.
+  if (!auth.currentUser) {
+    return JSON.parse(localStorage.getItem("users") || "[]");
+  }
+
   try {
     const snap = await getDocs(collection(db, "users"));
     const list = snap.docs.map(d => d.data());
+
+    // Aseguramos que exista la cuenta admin local
     if (!list.find(u => u.email === ADMIN_ACCOUNT.email)) {
       list.push(ADMIN_ACCOUNT);
     }
+
     localStorage.setItem("users", JSON.stringify(list));
     return list;
   } catch (err) {
     console.error("🔥 loadUsers()", err.code || err);
-    // fallback a modo offline
+    // Modo offline o sin permisos
     return JSON.parse(localStorage.getItem("users") || "[]");
   }
 }
@@ -1793,30 +1802,24 @@ function AdminPanel() {
   // Users panel
     function UsersPanel() {
       const [search, setSearch] = useState("");
-      const [list, setList] = useState([]);
-      const listRef = useRef([]);
-      useEffect(() => {
-        loadUsers()
-          .then(r => {
-            setList(r);
-            listRef.current = r;     // evita parpadeo inicial
-          })
-          .catch(console.error);
-      }, []);
+      const [list, setList] = useState(() =>
+        JSON.parse(localStorage.getItem("users") || "[]")
+      );
+      const listRef = useRef(list);
+
+      // Eliminado el useEffect de loadUsers() inicial
 
       useEffect(() => {
         const unsub = onSnapshot(
           collection(db, "users"),
           snap => {
             const arr = snap.docs.map(d => d.data());
-            if (arr.length === 0) return; // ignora el primer ping vacío
 
-            // evita parpadeo: solo actualiza si hubo cambios reales
-            if (JSON.stringify(arr) !== JSON.stringify(listRef.current)) {
-              localStorage.setItem("users", JSON.stringify(arr));
-              listRef.current = arr;
-              setList(arr);
-            }
+            if (JSON.stringify(arr) === JSON.stringify(listRef.current)) return; // sin cambios
+
+            localStorage.setItem("users", JSON.stringify(arr));
+            listRef.current = arr;
+            setList(arr);
           },
           err => console.error("onSnapshot users", err)
         );
