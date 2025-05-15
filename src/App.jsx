@@ -1807,19 +1807,29 @@ function AdminPanel() {
       );
       const listRef = useRef(list);
 
-      // Eliminado el useEffect de loadUsers() inicial
-
       useEffect(() => {
+        let first = true;
         const unsub = onSnapshot(
           collection(db, "users"),
+          { includeMetadataChanges: true },
           snap => {
-            const arr = snap.docs.map(d => d.data());
+            const arr = snap.docs
+              // ignoramos eco local para evitar parpadeos
+              .filter(d => !d.metadata.hasPendingWrites)
+              .map(d => d.data());
 
-            if (JSON.stringify(arr) === JSON.stringify(listRef.current)) return; // sin cambios
+            // aseguramos cuenta admin en memoria
+            if (!arr.find(u => u.email === ADMIN_ACCOUNT.email)) {
+              arr.push(ADMIN_ACCOUNT);
+            }
 
-            localStorage.setItem("users", JSON.stringify(arr));
-            listRef.current = arr;
-            setList(arr);
+            // solo redibujamos si realmente cambian los datos
+            if (first || JSON.stringify(arr) !== JSON.stringify(listRef.current)) {
+              localStorage.setItem("users", JSON.stringify(arr));
+              listRef.current = arr;
+              setList(arr);
+            }
+            first = false;
           },
           err => console.error("onSnapshot users", err)
         );
@@ -1827,9 +1837,19 @@ function AdminPanel() {
       }, []);
 
       const toggleBlock = async (email) => {
+        // Optimistic UI → sin parpadeos
+        setList(prev => {
+          const updated = prev.map(u =>
+            u.email === email ? { ...u, blocked: !u.blocked } : u
+          );
+          listRef.current = updated;
+          localStorage.setItem("users", JSON.stringify(updated));
+          return updated;
+        });
+
         try {
           await updateDoc(doc(db, "users", email), {
-            blocked: !list.find(u => u.email === email)?.blocked
+            blocked: !listRef.current.find(u => u.email === email)?.blocked
           });
         } catch (e) {
           console.error(e);
