@@ -22,15 +22,6 @@ import {
   deleteDoc
 } from "./firebase";
 
-// Firebase Auth helpers
-import {
-  auth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  sendEmailVerification,
-  deleteDoc          // 🔑 ahora viene desde nuestro wrapper
-} from "./firebase";
 
 
 // ───────────── Simple localStorage auth (demo) ─────────────
