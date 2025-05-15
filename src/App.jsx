@@ -906,9 +906,12 @@ function Contact() {
 ──────────────────────────*/
 function Register() {
   const [form, setForm] = useState({
-    email: "", password: "",
-    phone: "", name: "", lastname: "", address: "",
-    avatar: "", banner: ""
+    email: "",
+    password: "",
+    phone: "",
+    name: "",
+    lastname: "",
+    address: ""
   });
   const nav = useNavigate();
 
@@ -955,33 +958,15 @@ function Register() {
     <section className="container mx-auto px-4 py-16 max-w-md">
       <h2 className="text-2xl font-bold mb-6 text-center">Registro</h2>
       <form onSubmit={submit} className="space-y-4">
-        <input name="email" type="email" required placeholder="Email" value={form.email} onChange={handle} className="w-full border rounded p-2" />
-        <input name="password" type="password" required placeholder="Contraseña" value={form.password} onChange={handle} className="w-full border rounded p-2" />
-        <input name="phone" required placeholder="Teléfono" value={form.phone} onChange={handle} className="w-full border rounded p-2" />
-        <input name="name" required placeholder="Nombre" value={form.name} onChange={handle} className="w-full border rounded p-2" />
-        <input name="lastname" required placeholder="Apellidos" value={form.lastname} onChange={handle} className="w-full border rounded p-2" />
-        <input name="address" required placeholder="Dirección" value={form.address} onChange={handle} className="w-full border rounded p-2" />
-        <input type="file" accept="image/*"
-          onChange={e=>{
-            const f=e.target.files[0];
-            if(!f) return;
-            const r=new FileReader();
-            r.onload=ev=>setForm({...form,avatar:ev.target.result});
-            r.readAsDataURL(f);
-          }}
-          className="w-full border rounded p-2" />
-        <input type="file" accept="image/*"
-          onChange={e=>{
-            const f=e.target.files[0];
-            if(!f) return;
-            const r=new FileReader();
-            r.onload=ev=>setForm({...form,banner:ev.target.result});
-            r.readAsDataURL(f);
-          }}
-          className="w-full border rounded p-2" />
+        <input name="email" type="email" required placeholder="Email" value={form.email} onChange={handle} className="w-full border rounded px-3 py-2 border-gray-300 focus:ring-sky-500 focus:border-sky-500" />
+        <input name="password" type="password" required placeholder="Contraseña" value={form.password} onChange={handle} className="w-full border rounded px-3 py-2 border-gray-300 focus:ring-sky-500 focus:border-sky-500" />
+        <input name="phone" required placeholder="Teléfono" value={form.phone} onChange={handle} className="w-full border rounded px-3 py-2 border-gray-300 focus:ring-sky-500 focus:border-sky-500" />
+        <input name="name" required placeholder="Nombre" value={form.name} onChange={handle} className="w-full border rounded px-3 py-2 border-gray-300 focus:ring-sky-500 focus:border-sky-500" />
+        <input name="lastname" required placeholder="Apellidos" value={form.lastname} onChange={handle} className="w-full border rounded px-3 py-2 border-gray-300 focus:ring-sky-500 focus:border-sky-500" />
+        <input name="address" required placeholder="Dirección" value={form.address} onChange={handle} className="w-full border rounded px-3 py-2 border-gray-300 focus:ring-sky-500 focus:border-sky-500" />
         <button className="w-full bg-sky-600 text-white rounded py-2">Registrarse</button>
       </form>
-      <p className="text-xs text-center mt-2">
+      <p className="text-sm text-center mt-2">
         ¿Olvidaste la contraseña?&nbsp;
         <button
           type="button"
@@ -1054,7 +1039,7 @@ function Login() {
 
   return (
     <section className="container mx-auto px-4 py-16 flex justify-center">
-      <div className="bg-white shadow rounded-2xl p-8 w-full max-w-md">
+      <div className="bg-white shadow-lg rounded-lg p-10 w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center">Iniciar sesión</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -1064,7 +1049,7 @@ function Login() {
             onChange={handleChange}
             required
             placeholder="Email"
-            className="w-full border rounded p-2"
+            className="w-full border rounded px-3 py-2 border-gray-300 focus:ring-sky-500 focus:border-sky-500"
           />
           <input
             type="password"
@@ -1073,7 +1058,7 @@ function Login() {
             onChange={handleChange}
             required
             placeholder="Contraseña"
-            className="w-full border rounded p-2"
+            className="w-full border rounded px-3 py-2 border-gray-300 focus:ring-sky-500 focus:border-sky-500"
           />
           <button className="w-full bg-sky-600 text-white rounded py-2">
             Entrar
