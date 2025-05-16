@@ -757,7 +757,7 @@ function RequestForm() {
         step: 0,
         details: {},           // initialize details map for per-step storage
       });
-      saveRequests(requests);
+      await saveRequests(requests);
       setSent(true);
     } catch (err) {
       console.error(err);
