@@ -19,6 +19,7 @@ import {
   onSnapshot,
   deleteDoc,
   query,
+  orderBy,
   where
 } from "firebase/firestore";
 
@@ -52,5 +53,6 @@ export {
   onSnapshot,
   deleteDoc,
   query,
+  orderBy,
   where
 };
