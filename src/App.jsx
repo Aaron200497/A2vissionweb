@@ -82,6 +82,12 @@ function ChatPopup({ reqId, onClose }) {
           type="text"
           value={text}
           onChange={e => setText(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
           placeholder="Escribe un mensaje"
           className="flex-1 border rounded p-1 text-sm"
         />
@@ -101,8 +107,12 @@ function ChatPopup({ reqId, onClose }) {
         <button onClick={() => fileInputRef.current.click()} className="text-sm px-2">
           📎
         </button>
-        <button onClick={handleSend} className="text-sm bg-sky-600 text-white px-2 py-1 rounded">
-          Enviar
+        <button
+          onClick={handleSend}
+          title="Enviar mensaje"
+          className="text-sm bg-sky-600 text-white px-2 py-1 rounded"
+        >
+          ✈️
         </button>
       </div>
     </div>
