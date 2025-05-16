@@ -688,6 +688,7 @@ function RequestForm() {
     message: "",
   });
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
   const formRef = useRef(null);
   const plan = ALL_PLANS.find(p => p.slug === slug);
 
@@ -718,11 +719,12 @@ function RequestForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setLoading(true);
 
     // Generar número de ticket de 6 dígitos
     const ticket = Date.now().toString().slice(-6);
 
-    // incluye ticket como <input hidden> para que llegue al e‑mail de confirmación
+    // añade ticket hidden para EmailJS
     const ticketInput = document.createElement("input");
     ticketInput.type = "hidden";
     ticketInput.name = "ticket";
@@ -730,20 +732,20 @@ function RequestForm() {
     formRef.current.appendChild(ticketInput);
 
     try {
-      // 1) Auto‑reply al cliente  (formRef contiene todos los campos)
+      // Auto‑reply al cliente
       await emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, PUBLIC_KEY);
-      // 2) Notificación interna con un segundo template
-      const adminParams = {
-        ticket,   // usado también en el auto‑reply
+      // Aviso interno
+      await emailjs.send(SERVICE_ID, TEMPLATE_ADMIN, {
+        ticket,
         plan: plan.name,
         email: formData.email,
         phone: formData.phone,
         name: formData.name,
         lastname: formData.lastname,
         message: formData.message,
-      };
-      await emailjs.send(SERVICE_ID, TEMPLATE_ADMIN, adminParams, PUBLIC_KEY);
-      // preparar nueva solicitud con UID para cumplir reglas Firestore
+      }, PUBLIC_KEY);
+
+      // Prepara y guarda en Firestore
       const newReq = {
         id: Date.now().toString(),
         uid: auth.currentUser.uid,
@@ -757,17 +759,16 @@ function RequestForm() {
         step: 0,
         details: {},
       };
-      try {
-        await addDoc(collection(db, "requests"), newReq);
-      } catch (err) {
-        console.error("Error al guardar en Firestore:", err);
-      }
-      // sincronizar localStorage desde Firestore o fallback
+      await addDoc(collection(db, "requests"), newReq);
+
+      // Sincroniza localStorage
       await loadRequests();
       setSent(true);
     } catch (err) {
-      console.error(err);
-      alert("Error exacto: " + (err?.text || err));
+      console.error("Error al guardar solicitud:", err);
+      alert("Error guardando la solicitud: " + err.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -885,9 +886,10 @@ function RequestForm() {
 
           <button
             type="submit"
-            className="w-full py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700"
+            disabled={loading}
+            className="w-full py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:opacity-50"
           >
-            Enviar solicitud
+            {loading ? "Enviando..." : "Enviar solicitud"}
           </button>
         </form>
       )}
