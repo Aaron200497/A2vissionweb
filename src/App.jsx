@@ -743,11 +743,11 @@ function RequestForm() {
         message: formData.message,
       };
       await emailjs.send(SERVICE_ID, TEMPLATE_ADMIN, adminParams, PUBLIC_KEY);
-      // guardar en Firestore + localStorage para que el admin la vea
-      const requests = await loadRequests();
-      requests.push({
+      // preparar nueva solicitud con UID para cumplir reglas Firestore
+      const newReq = {
         id: Date.now().toString(),
-        ticket,                // número visible
+        uid: auth.currentUser.uid,
+        ticket,
         plan: plan.slug,
         userEmail: formData.email,
         phone: formData.phone,
@@ -755,9 +755,15 @@ function RequestForm() {
         lastname: formData.lastname,
         message: formData.message,
         step: 0,
-        details: {},           // initialize details map for per-step storage
-      });
-      await saveRequests(requests);
+        details: {},
+      };
+      try {
+        await addDoc(collection(db, "requests"), newReq);
+      } catch (err) {
+        console.error("Error al guardar en Firestore:", err);
+      }
+      // sincronizar localStorage desde Firestore o fallback
+      await loadRequests();
       setSent(true);
     } catch (err) {
       console.error(err);
@@ -1901,6 +1907,7 @@ const saveNewSub = async () => {
   const list = await loadSubscriptions();
   list.push({
     id: Date.now().toString(),
+    uid: auth.currentUser.uid,
     email: subEmail.trim(),
     plan: subPlan,
     start: new Date().toISOString(),
