@@ -1,7 +1,4 @@
 import React, { useState, useRef, useEffect, useContext, createContext } from "react";
-//──────────────────────────
-// ChatPopup component
-//──────────────────────────
 import {
   auth,
   db,
