@@ -18,7 +18,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  sendEmailVerification
+  sendEmailVerification,
+  getDoc,
 } from "./firebase";
 
 
@@ -194,10 +195,16 @@ const steps = [
   ];
 /* Almacenamos solicitudes en localStorage para la demo */
 async function loadRequests() {
-  const snap = await getDocs(collection(db, "requests"));
-  const list = snap.docs.map(d => d.data());
-  localStorage.setItem("requests", JSON.stringify(list));
-  return list;
+  try {
+    const snap = await getDocs(collection(db, "requests"));
+    const list = snap.docs.map(d => d.data());
+    localStorage.setItem("requests", JSON.stringify(list));
+    return list;
+  } catch (err) {
+    console.error("🔥 loadRequests()", err.code || err);
+    // Modo offline o sin permisos
+    return JSON.parse(localStorage.getItem("requests") || "[]");
+  }
 }
 async function saveRequests(list) {
   localStorage.setItem("requests", JSON.stringify(list));
@@ -206,15 +213,38 @@ async function saveRequests(list) {
   }
 }
 async function loadSubscriptions() {
-  const snap = await getDocs(collection(db, "subscriptions"));
-  const list = snap.docs.map(d => d.data());
-  localStorage.setItem("subscriptions", JSON.stringify(list));
-  return list;
+  try {
+    const snap = await getDocs(collection(db, "subscriptions"));
+    const list = snap.docs.map(d => d.data());
+    localStorage.setItem("subscriptions", JSON.stringify(list));
+    return list;
+  } catch (err) {
+    console.error("🔥 loadSubscriptions()", err.code || err);
+    return JSON.parse(localStorage.getItem("subscriptions") || "[]");
+  }
 }
 async function saveSubscriptions(list) {
   localStorage.setItem("subscriptions", JSON.stringify(list));
   for (const s of list) {
     await setDoc(doc(db, "subscriptions", s.id), s);
+  }
+}
+
+/* ─ Persistencia de metadatos de planes ─ */
+async function loadPlanMeta(slug) {
+  try {
+    const snap = await getDoc(doc(db, "plans", slug));
+    return snap.exists() ? snap.data() : {};
+  } catch (e) {
+    console.error("loadPlanMeta", e);
+    return {};
+  }
+}
+async function savePlanMeta(slug, data) {
+  try {
+    await setDoc(doc(db, "plans", slug), data, { merge: true });
+  } catch (e) {
+    console.error("savePlanMeta", e);
   }
 }
 
@@ -1161,19 +1191,21 @@ function Profile() {
           type="file"
           accept="image/*"
           style={{ display: "none" }}
-          onChange={e => {
+          onChange={async e => {
             const f = e.target.files[0];
             if (!f) return;
             const r = new FileReader();
-            r.onload = ev => {
+            r.onload = async ev => {
               const updated = { ...form, avatar: ev.target.result };
-              setForm(updated);                               // UI
-              // persiste en localStorage y Firestore
+              setForm(updated);
+
               const users = loadUsers().map(u =>
                 u.email === user.email ? { ...u, avatar: ev.target.result } : u
               );
-              saveUsers(users);
-              login({ ...user, avatar: ev.target.result });   // contexto
+              await saveUsers(users, false);
+              await setDoc(doc(db, "users", user.email), { avatar: ev.target.result }, { merge: true });
+
+              login({ ...user, avatar: ev.target.result });
             };
             r.readAsDataURL(f);
           }}
@@ -1338,6 +1370,27 @@ function UserRequests() {
                       >
                         Descargar archivo
                       </a>
+                    )}
+                    <textarea
+                      rows={2}
+                      className="w-full border rounded p-1 text-xs mt-2"
+                      placeholder="Responder al admin…"
+                      value={userReplyMap[r.id]?.[idx] || ""}
+                      onChange={e =>
+                        setUserReplyMap(prev => ({
+                          ...prev,
+                          [r.id]: { ...(prev[r.id] || {}), [idx]: e.target.value }
+                        }))
+                      }
+                    />
+                    <button
+                      onClick={() => saveUserReply(r.id, idx)}
+                      className="text-xs mt-1 bg-sky-600 text-white px-2 py-0.5 rounded"
+                    >
+                      Enviar
+                    </button>
+                    {r.details?.[idx]?.userReply && (
+                      <p className="text-xs mt-1"><strong>Tú:</strong> {r.details[idx].userReply}</p>
                     )}
                   </div>
                 ) : null
@@ -1785,6 +1838,13 @@ function AdminPanel() {
                     }}
                     className="text-sm mt-2"
                   />
+                  {Object.entries(r.details || {}).map(([k,v]) =>
+                    v.userReply ? (
+                      <p key={k} className="text-xs mt-1">
+                        <strong>Usuario&nbsp;({steps[k]}):</strong> {v.userReply}
+                      </p>
+                    ) : null
+                  )}
                 </div>
               </div>
             ))}
@@ -1801,11 +1861,12 @@ function AdminPanel() {
       );
       const listRef = useRef(list);
 
+      const [open, setOpen] = useState({});
+
       useEffect(() => {
         let first = true;
         const unsub = onSnapshot(
           collection(db, "users"),
-          { includeMetadataChanges: true },
           snap => {
             const arr = snap.docs
               // ignoramos eco local para evitar parpadeos
@@ -1819,9 +1880,11 @@ function AdminPanel() {
 
             // solo redibujamos si realmente cambian los datos
             if (first || JSON.stringify(arr) !== JSON.stringify(listRef.current)) {
+              const prevOpen = { ...open };
               localStorage.setItem("users", JSON.stringify(arr));
               listRef.current = arr;
               setList(arr);
+              setOpen(prevOpen);
             }
             first = false;
           },
@@ -1841,7 +1904,6 @@ function AdminPanel() {
         }
       };
 
-      const [open, setOpen] = useState({});
       const filtered = list
         .filter(u => u.email.toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => a.email.localeCompare(b.email));
@@ -2016,10 +2078,20 @@ function PlanDetail() {
   const visKey = `plan_img_vis_${slug}`;
   const [img,setImg] = useState(localStorage.getItem(imgKey)||'');
   const [visible,setVisible] = useState(localStorage.getItem(visKey)==="1");
+  const [meta,setMeta]=useState({});
+  useEffect(()=>{
+    loadPlanMeta(slug).then(d=>{
+      setMeta(d);
+      if(d.conditions) setConditions(d.conditions);
+      if(d.img) setImg(d.img);
+      if(typeof d.visible==="boolean") setVisible(d.visible);
+    });
+  },[slug]);
 
   const saveConditions = () => {
     localStorage.setItem(storageKey, conditions);
     alert('Condiciones guardadas');
+    savePlanMeta(slug,{conditions});
   };
 
   if (!plan) {
@@ -2036,7 +2108,9 @@ function PlanDetail() {
       <h2 className="text-2xl font-bold">{plan.name}</h2>
       <p className="text-xl text-sky-600">{plan.price}</p>
       {/* Imagen para usuarios */}
-      {img && visible && <img src={img} alt="plan" className="max-h-40 mb-4" />}
+      {visible && (img || meta.img) && (
+        <img src={img || meta.img} alt="plan" className="max-h-40 mb-4"/>
+      )}
       <label className="block text-sm font-medium">Condiciones:</label>
       {isAdmin ? (
         <textarea
@@ -2062,13 +2136,18 @@ function PlanDetail() {
             <input type="file" accept="image/*" onChange={e=>{
               const f=e.target.files[0]; if(!f) return;
               const r=new FileReader();
-              r.onload=ev=>{ setImg(ev.target.result); localStorage.setItem(imgKey,ev.target.result); };
+              r.onload=ev=>{
+                setImg(ev.target.result);
+                localStorage.setItem(imgKey,ev.target.result);
+                savePlanMeta(slug,{img: ev.target.result});
+              };
               r.readAsDataURL(f);
             }}/>
             <label className="inline-flex items-center">
               <input type="checkbox" checked={visible} onChange={e=>{
                 setVisible(e.target.checked);
                 localStorage.setItem(visKey,e.target.checked?'1':'0');
+                savePlanMeta(slug,{visible: e.target.checked});
               }} className="mr-2"/>
               Mostrar a usuarios
             </label>
