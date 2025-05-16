@@ -1663,135 +1663,135 @@ function AdminPanel() {
 
   // Requests panel
     function RequestsPanel() {
-    return (
-      <div className="space-y-8">
-        {/* Añadir admin */}
-        <div className="border rounded p-4 space-y-2">
-          <h3 className="font-semibold">Añadir usuario admin</h3>
-          <div className="flex space-x-2">
-            <input
-              type="email"
-              value={emailAdmin}
-              onChange={(e) => setEmailAdmin(e.target.value)}
-              placeholder="correo@ejemplo.com"
-              className="flex-1 border rounded p-2"
-            />
-            <button
-              className="bg-sky-600 text-white px-4 rounded"
-              onClick={makeAdmin}
-            >
-              Añadir
-            </button>
+      return (
+        <div className="space-y-8">
+          {/* Añadir admin */}
+          <div className="border rounded p-4 space-y-2">
+            <h3 className="font-semibold">Añadir usuario admin</h3>
+            <div className="flex space-x-2">
+              <input
+                type="email"
+                value={emailAdmin}
+                onChange={(e) => setEmailAdmin(e.target.value)}
+                placeholder="correo@ejemplo.com"
+                className="flex-1 border rounded p-2"
+              />
+              <button
+                className="bg-sky-600 text-white px-4 rounded"
+                onClick={makeAdmin}
+              >
+                Añadir
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Solicitudes */}
-        <div className="space-y-4">
-          <h3 className="font-semibold">Solicitudes</h3>
-          {reqs.length === 0 && (
-            <p className="text-slate-500 text-sm">No hay solicitudes.</p>
-          )}
-          {reqs
-            .map((r) => (
-            <div key={r.id} className="border rounded p-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span>
-                  {ALL_PLANS.find((p) => p.slug === r.plan)?.name} —{" "}
-                  {r.step >= 0
-                    ? `paso ${r.step + 1}/${steps.length}`
-                    : "Rechazado"}
-                </span>
-                <div className="space-x-2">
-                  {r.step >= 0 && r.step < steps.length - 1 && (
-                    <button
-                      onClick={() => advanceStep(r.id)}
-                      className="text-sm bg-sky-600 text-white px-2 py-1 rounded"
-                    >
-                      Avanzar
-                    </button>
+          {/* Solicitudes */}
+          <div className="space-y-4">
+            <h3 className="font-semibold">Solicitudes</h3>
+            {reqs.length === 0 && (
+              <p className="text-slate-500 text-sm">No hay solicitudes.</p>
+            )}
+            {reqs.map((r) => (
+              <div key={r.id} className="border rounded p-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span>
+                    {ALL_PLANS.find((p) => p.slug === r.plan)?.name} —{" "}
+                    {r.step >= 0
+                      ? `paso ${r.step + 1}/${steps.length}`
+                      : "Rechazado"}
+                  </span>
+                  <div className="space-x-2">
+                    {r.step >= 0 && r.step < steps.length - 1 && (
+                      <button
+                        onClick={() => advanceStep(r.id)}
+                        className="text-sm bg-sky-600 text-white px-2 py-1 rounded"
+                      >
+                        Avanzar
+                      </button>
+                    )}
+                    {r.step === steps.length - 1 && (
+                      <button
+                        onClick={() => removeRequest(r.id)}
+                        className="text-sm bg-green-600 text-white px-2 py-1 rounded"
+                      >
+                        Finalizar
+                      </button>
+                    )}
+                    {r.step >= 0 && (
+                      <button
+                        onClick={() => reject(r.id)}
+                        className="text-sm bg-red-600 text-white px-2 py-1 rounded"
+                      >
+                        Rechazar
+                      </button>
+                    )}
+                    {r.step === -1 && (
+                      <button
+                        onClick={() => removeRequest(r.id)}
+                        className="text-sm bg-slate-500 text-white px-2 py-1 rounded"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600">
+                  {r.step >= 0 ? steps[r.step] : "Rechazado"}
+                </p>
+                <p className="text-xs">
+                  Nº solicitud: <strong>{r.ticket}</strong><br/>
+                  Email: {r.userEmail} — Tel: {r.phone}<br/>
+                  {r.name} {r.lastname}<br/>
+                  {r.message}
+                </p>
+                <button
+                  onClick={() => setShowDetails({ ...showDetails, [r.id]: !showDetails[r.id] })}
+                  className="text-sm underline flex items-center"
+                >
+                  {showDetails[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
+                  {Object.keys(r.details || {}).length > 0 && (
+                    <span className="ml-1 text-blue-600" title="Tienes nuevos mensajes o archivos">
+                      📩
+                    </span>
                   )}
-                  {r.step === steps.length - 1 && (
-                    <button
-                      onClick={() => removeRequest(r.id)}
-                      className="text-sm bg-green-600 text-white px-2 py-1 rounded"
-                    >
-                      Finalizar
-                    </button>
-                  )}
+                </button>
+                <div className={showDetails[r.id] ? '' : 'hidden'}>
                   {r.step >= 0 && (
-                    <button
-                      onClick={() => reject(r.id)}
-                      className="text-sm bg-red-600 text-white px-2 py-1 rounded"
-                    >
-                      Rechazar
-                    </button>
+                    <>
+                      <textarea
+                        value={msgMap[r.id] || ""}
+                        onChange={(e) => setMsg(r.id, e.target.value)}
+                        placeholder="Mensaje opcional al usuario"
+                        className="w-full border rounded p-2 text-sm"
+                      />
+                      <button
+                        onClick={() => advanceStep(r.id)}
+                        className="mt-2 text-sm bg-blue-600 text-white px-2 py-1 rounded"
+                      >
+                        Guardar y enviar
+                      </button>
+                    </>
                   )}
-                  {r.step === -1 && (
-                    <button
-                      onClick={() => removeRequest(r.id)}
-                      className="text-sm bg-slate-500 text-white px-2 py-1 rounded"
-                    >
-                      Eliminar
-                    </button>
-                  )}
+                  {/* Always show file input after textarea */}
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => setFile(r.id, ev.target.result);
+                      reader.readAsDataURL(file);
+                    }}
+                    className="text-sm mt-2"
+                  />
                 </div>
               </div>
-              <p className="text-xs text-slate-600">
-                {r.step >= 0 ? steps[r.step] : "Rechazado"}
-              </p>
-              <p className="text-xs">
-                Nº solicitud: <strong>{r.ticket}</strong><br/>
-                Email: {r.userEmail} — Tel: {r.phone}<br/>
-                {r.name} {r.lastname}<br/>
-                {r.message}
-              </p>
-              <button
-                onClick={() => setShowDetails({ ...showDetails, [r.id]: !showDetails[r.id] })}
-                className="text-sm underline flex items-center"
-              >
-                {showDetails[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
-                {Object.keys(r.details || {}).length > 0 && (
-                  <span className="ml-1 text-blue-600" title="Tienes nuevos mensajes o archivos">
-                    📩
-                  </span>
-                )}
-              </button>
-              <div className={showDetails[r.id] ? '' : 'hidden'}>
-                {r.step >= 0 && (
-                  <>
-                    <textarea
-                      value={msgMap[r.id] || ""}
-                      onChange={(e) => setMsg(r.id, e.target.value)}
-                      placeholder="Mensaje opcional al usuario"
-                      className="w-full border rounded p-2 text-sm"
-                    />
-                    <button
-                      onClick={() => advanceStep(r.id)}
-                      className="mt-2 text-sm bg-blue-600 text-white px-2 py-1 rounded"
-                    >
-                      Guardar y enviar
-                    </button>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={e => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = ev => setFile(r.id, ev.target.result);
-                    reader.readAsDataURL(file);
-                  }}
-                  className="text-sm mt-2"
-                />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
   // Users panel
     function UsersPanel() {
@@ -1842,9 +1842,9 @@ function AdminPanel() {
       };
 
       const [open, setOpen] = useState({});
-      const filtered = list.filter(u =>
-        u.email.toLowerCase().includes(search.toLowerCase())
-      );
+      const filtered = list
+        .filter(u => u.email.toLowerCase().includes(search.toLowerCase()))
+        .sort((a, b) => a.email.localeCompare(b.email));
 
       // For requests and subs info
       const [reqs, setReqs] = useState([]);
