@@ -9,17 +9,20 @@ import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } fro
 import {
   db,
   collection,
+  doc,
+  getDoc,
   getDocs,
   setDoc,
-  doc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
+  query,
+  where,
   auth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  sendEmailVerification,
-  getDoc,
+  sendEmailVerification
 } from "./firebase";
 
 
@@ -1314,11 +1317,21 @@ function UserRequests() {
     alert("Respuesta guardada");
   };
 
+  const { user } = useAuth();   // ← nuevo
   useEffect(() => {
-    loadRequests().then(setReqs);
-    const int = setInterval(() => loadRequests().then(setReqs), 1000);
-    return () => clearInterval(int);
-  }, []);
+    if (!user) return;
+    const q = query(collection(db, "requests"), where("userEmail", "==", user.email));
+    const unsub = onSnapshot(
+      q,
+      snap => {
+        const list = snap.docs.map(d => d.data());
+        saveRequests(list);
+        setReqs(list);
+      },
+      err => console.error("onSnapshot requests (user)", err)
+    );
+    return () => unsub();
+  }, [user]);
 
   return (
     <section className="container mx-auto px-4 py-16 space-y-6">
@@ -1588,15 +1601,18 @@ function AdminPanel() {
   const [subEmail, setSubEmail] = useState('');
   const [subPlan, setSubPlan] = useState(APP_PLANS[0].slug);
 
-  // carga inicial asíncrona
+  // carga inicial asíncrona (replaced with onSnapshot below)
   useEffect(() => {
-    loadRequests().then(setReqs);
-  }, []);
-  useEffect(() => {
-    const int = setInterval(() => {
-      loadRequests().then(setReqs);
-    }, 1000);
-    return () => clearInterval(int);
+    const unsub = onSnapshot(
+      collection(db, "requests"),
+      snap => {
+        const list = snap.docs.map(d => d.data());
+        saveRequests(list);
+        setReqs(list);
+      },
+      err => console.error("onSnapshot requests (admin)", err)
+    );
+    return () => unsub();
   }, []);
 
   const updateAndSave = (newList) => {
@@ -1897,7 +1913,7 @@ function AdminPanel() {
         if (!window.confirm("¿Eliminar usuario?")) return;
         try {
           // Remove from Firestore and update UI
-          await setDoc(doc(db, "users", email), {}, { merge: true });
+          await deleteDoc(doc(db, "users", email));
         } catch (e) {
           console.error(e);
           alert("No se pudo eliminar");
@@ -1985,7 +2001,7 @@ function AdminPanel() {
   // Subscriptions panel
   function SubscriptionsPanel() {
     const [subs, setSubs] = useState([]);
-    const [showModal,setShowModal]=useState(false);
+    const [showModal, setShowModal] = useState(false);
     const [email,setEmail]=useState('');
     const [planSel,setPlanSel]=useState(ALL_PLANS[0].slug);
     const openModal=()=>setShowModal(true);
