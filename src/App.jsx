@@ -69,11 +69,12 @@ function ChatPopup({ reqId, onClose }) {
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`text-sm ${
-              m.sender === auth.currentUser.uid ? "text-right" : "text-left"
-            }`}
+            className={m.sender === auth.currentUser.uid ? "text-right" : "text-left"}
           >
-            <div className="inline-block p-1 bg-gray-100 rounded">
+            <div className="text-xs font-semibold mb-1">
+              {m.sender === auth.currentUser.uid ? "Tú" : "Interlocutor"}
+            </div>
+            <div className="inline-block p-1 bg-gray-100 rounded text-sm">
               {m.text}
               {m.attachment && (
                 <div>
@@ -1481,10 +1482,22 @@ function UserRequests() {
 
       {reqs.map((r) => (
         <div key={r.id} className="border rounded p-4">
+          {/* Chat popup always accessible from card */}
+          {chatOpenUser[r.id] && (
+            <ChatPopup reqId={r.id} onClose={() => toggleChatUser(r.id)} />
+          )}
           <div className="flex items-center">
             <h4 className="font-semibold">
               {ALL_PLANS.find((p) => p.slug === r.plan)?.name}
             </h4>
+            {/* Chat icon to open chat */}
+            <button
+              onClick={() => toggleChatUser(r.id)}
+              className="ml-auto text-2xl hover:text-sky-600"
+              title="Abrir chat"
+            >
+              💬
+            </button>
             {/* Red dot if unread */}
             {r.unread && (
               <span className="inline-block w-2 h-2 bg-red-600 rounded-full ml-2" />
@@ -1521,15 +1534,6 @@ function UserRequests() {
                       >
                         Descargar archivo
                       </a>
-                    )}
-                    <button
-                      onClick={() => toggleChatUser(r.id)}
-                      className="mt-2 text-sm bg-sky-600 text-white px-2 py-1 rounded"
-                    >
-                      Abrir chat
-                    </button>
-                    {chatOpenUser[r.id] && (
-                      <ChatPopup reqId={r.id} onClose={() => toggleChatUser(r.id)} />
                     )}
                   </div>
                 ) : null
@@ -1891,6 +1895,10 @@ function AdminPanel() {
             )}
             {reqs.map((r) => (
               <div key={r.id} className="border rounded p-4 space-y-2">
+                {/* Chat popup always accessible from card */}
+                {chatOpenAdmin[r.id] && (
+                  <ChatPopup reqId={r.id} onClose={() => toggleChatAdmin(r.id)} />
+                )}
                 <div className="flex justify-between items-center">
                   <span>
                     {ALL_PLANS.find((p) => p.slug === r.plan)?.name} —{" "}
@@ -1898,6 +1906,14 @@ function AdminPanel() {
                       ? `paso ${r.step + 1}/${steps.length}`
                       : "Rechazado"}
                   </span>
+                  {/* Chat icon */}
+                  <button
+                    onClick={() => toggleChatAdmin(r.id)}
+                    className="text-2xl hover:text-sky-600 ml-2"
+                    title="Abrir chat"
+                  >
+                    💬
+                  </button>
                   <div className="space-x-2">
                     {r.step >= 0 && r.step < steps.length - 1 && (
                       <button
@@ -1956,15 +1972,7 @@ function AdminPanel() {
                 <div className={showDetails[r.id] ? '' : 'hidden'}>
                   {r.step >= 0 && (
                     <>
-                      <button
-                        onClick={() => toggleChatAdmin(r.id)}
-                        className="mt-2 text-sm bg-sky-600 text-white px-2 py-1 rounded"
-                      >
-                        Abrir chat
-                      </button>
-                      {chatOpenAdmin[r.id] && (
-                        <ChatPopup reqId={r.id} onClose={() => toggleChatAdmin(r.id)} />
-                      )}
+                      {/* Remove old chat button; chat icon is now always present */}
                     </>
                   )}
                   {Object.entries(r.details || {}).map(([k,v]) =>
