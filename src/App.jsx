@@ -2,22 +2,108 @@ import React, { useState, useRef, useEffect, useContext, createContext } from "r
 //──────────────────────────
 // ChatPopup component
 //──────────────────────────
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  auth,
+  db
+} from "./firebase";
+
 function ChatPopup({ reqId, onClose }) {
+  const [messages, setMessages] = useState([]);
+  const [text, setText] = useState("");
+  const [file, setFile] = useState(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const msgsQuery = query(
+      collection(db, "requests", reqId, "messages"),
+      orderBy("timestamp")
+    );
+    const unsub = onSnapshot(msgsQuery, snap => {
+      setMessages(snap.docs.map(d => d.data()));
+    }, err => console.error("Chat onSnapshot:", err));
+    return () => unsub();
+  }, [reqId]);
+
+  const handleSend = async () => {
+    if (!text && !file) return;
+    await addDoc(
+      collection(db, "requests", reqId, "messages"),
+      {
+        sender: auth.currentUser.uid,
+        text,
+        attachment: file,
+        timestamp: Date.now(),
+      }
+    );
+    setText("");
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
     <div className="fixed bottom-4 right-4 w-64 h-80 bg-white shadow-lg rounded-lg flex flex-col">
       <div className="flex justify-between items-center p-2 bg-sky-600 text-white rounded-t-lg">
         <span>Chat solicitud {reqId}</span>
         <button onClick={onClose} className="text-xl leading-none">&times;</button>
       </div>
-      <div className="flex-1 p-2 overflow-y-auto">
-        {/* Mensajes del chat */}
+      <div className="flex-1 p-2 overflow-y-auto space-y-2">
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            className={`text-sm ${
+              m.sender === auth.currentUser.uid ? "text-right" : "text-left"
+            }`}
+          >
+            <div className="inline-block p-1 bg-gray-100 rounded">
+              {m.text}
+              {m.attachment && (
+                <div>
+                  <a
+                    href={m.attachment}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline text-xs"
+                  >
+                    Ver adjunto
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
-      <div className="p-2 border-t">
+      <div className="p-2 border-t flex space-x-1">
         <input
           type="text"
+          value={text}
+          onChange={e => setText(e.target.value)}
           placeholder="Escribe un mensaje"
-          className="w-full border rounded p-1 text-sm"
+          className="flex-1 border rounded p-1 text-sm"
         />
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={e => {
+            const f = e.target.files[0];
+            if (f) {
+              const reader = new FileReader();
+              reader.onload = ev => setFile(ev.target.result);
+              reader.readAsDataURL(f);
+            }
+          }}
+          className="hidden"
+        />
+        <button onClick={() => fileInputRef.current.click()} className="text-sm px-2">
+          📎
+        </button>
+        <button onClick={handleSend} className="text-sm bg-sky-600 text-white px-2 py-1 rounded">
+          Enviar
+        </button>
       </div>
     </div>
   );
