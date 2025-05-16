@@ -858,19 +858,13 @@ function RequestForm() {
             <input type="checkbox" required className="mt-1" />
             <span className="text-sm">
               Acepto las&nbsp;
-              <a
-                href="/terms"
-                className="text-sky-600 hover:underline"
-              >
+              <Link to="/terms" className="text-sky-600 hover:underline">
                 condiciones
-              </a>
+              </Link>
               &nbsp;y la&nbsp;
-              <a
-                href="/privacy"
-                className="text-sky-600 hover:underline"
-              >
+              <Link to="/privacy" className="text-sky-600 hover:underline">
                 política de privacidad
-              </a>
+              </Link>
               .
             </span>
           </div>
