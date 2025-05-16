@@ -31,22 +31,28 @@ function ChatPopup({ reqId, onClose }) {
 
   const handleSend = async () => {
     if (!text && !file) return;
-    await addDoc(
-      collection(db, "requests", reqId, "messages"),
-      {
-        sender: auth.currentUser.uid,
-        text,
-        attachment: file,
-        timestamp: Date.now(),
-      }
-    );
+    try {
+      await addDoc(
+        collection(db, "requests", reqId, "messages"),
+        {
+          sender: auth.currentUser.uid,
+          text,
+          attachment: file,
+          timestamp: Date.now(),
+        }
+      );
+    } catch (err) {
+      console.error("Error sending chat message:", err);
+      alert("Error enviando mensaje: " + err.message);
+      return;
+    }
     setText("");
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
-    <div className="fixed bottom-4 right-4 w-64 h-80 bg-white shadow-lg rounded-lg flex flex-col">
+    <div className="fixed bottom-4 right-4 w-96 h-96 bg-white shadow-lg rounded-lg flex flex-col">
       <div className="flex justify-between items-center p-2 bg-sky-600 text-white rounded-t-lg">
         <span>Chat solicitud {reqId}</span>
         <button onClick={onClose} className="text-xl leading-none">&times;</button>
