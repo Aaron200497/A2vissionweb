@@ -760,7 +760,8 @@ function RequestForm() {
         step: 0,
         details: {},
       };
-      await addDoc(collection(db, "requests"), newReq);
+      // Usar setDoc en lugar de addDoc para evitar la dependencia de addDoc
+      await setDoc(doc(db, "requests", newReq.id), newReq);
 
       // Sincroniza localStorage
       await loadRequests();
