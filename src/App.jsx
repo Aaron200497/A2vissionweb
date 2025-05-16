@@ -1,4 +1,27 @@
 import React, { useState, useRef, useEffect, useContext, createContext } from "react";
+//──────────────────────────
+// ChatPopup component
+//──────────────────────────
+function ChatPopup({ reqId, onClose }) {
+  return (
+    <div className="fixed bottom-4 right-4 w-64 h-80 bg-white shadow-lg rounded-lg flex flex-col">
+      <div className="flex justify-between items-center p-2 bg-sky-600 text-white rounded-t-lg">
+        <span>Chat solicitud {reqId}</span>
+        <button onClick={onClose} className="text-xl leading-none">&times;</button>
+      </div>
+      <div className="flex-1 p-2 overflow-y-auto">
+        {/* Mensajes del chat */}
+      </div>
+      <div className="p-2 border-t">
+        <input
+          type="text"
+          placeholder="Escribe un mensaje"
+          className="w-full border rounded p-1 text-sm"
+        />
+      </div>
+    </div>
+  );
+}
 import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
@@ -760,7 +783,7 @@ function RequestForm() {
         step: 0,
         details: {},
       };
-      // Usar setDoc en lugar de addDoc para evitar la dependencia de addDoc
+      // Save request using setDoc
       await setDoc(doc(db, "requests", newReq.id), newReq);
 
       // Sincroniza localStorage
@@ -1270,6 +1293,9 @@ function UserRequests() {
   const [reqs, setReqs] = useState([]);
   const [showDetailsUser, setShowDetailsUser] = useState({});
   const [userReplyMap, setUserReplyMap] = useState({});
+  const [chatOpenUser, setChatOpenUser] = useState({});
+  const toggleChatUser = id =>
+    setChatOpenUser(prev => ({ ...prev, [id]: !prev[id] }));
 
   // Toggle logic for step details
   const toggleStepDetails = (id, idx) => {
@@ -1393,26 +1419,14 @@ function UserRequests() {
                         Descargar archivo
                       </a>
                     )}
-                    <textarea
-                      rows={2}
-                      className="w-full border rounded p-1 text-xs mt-2"
-                      placeholder="Responder al admin…"
-                      value={userReplyMap[r.id]?.[idx] || ""}
-                      onChange={e =>
-                        setUserReplyMap(prev => ({
-                          ...prev,
-                          [r.id]: { ...(prev[r.id] || {}), [idx]: e.target.value }
-                        }))
-                      }
-                    />
                     <button
-                      onClick={() => saveUserReply(r.id, idx)}
-                      className="text-xs mt-1 bg-sky-600 text-white px-2 py-0.5 rounded"
+                      onClick={() => toggleChatUser(r.id)}
+                      className="mt-2 text-sm bg-sky-600 text-white px-2 py-1 rounded"
                     >
-                      Enviar
+                      Abrir chat
                     </button>
-                    {r.details?.[idx]?.userReply && (
-                      <p className="text-xs mt-1"><strong>Tú:</strong> {r.details[idx].userReply}</p>
+                    {chatOpenUser[r.id] && (
+                      <ChatPopup reqId={r.id} onClose={() => toggleChatUser(r.id)} />
                     )}
                   </div>
                 ) : null
@@ -1741,6 +1755,9 @@ function AdminPanel() {
 
   // Requests panel
     function RequestsPanel() {
+      const [chatOpenAdmin, setChatOpenAdmin] = useState({});
+      const toggleChatAdmin = id =>
+        setChatOpenAdmin(prev => ({ ...prev, [id]: !prev[id] }));
       return (
         <div className="space-y-8">
           {/* Añadir admin */}
@@ -1836,33 +1853,17 @@ function AdminPanel() {
                 <div className={showDetails[r.id] ? '' : 'hidden'}>
                   {r.step >= 0 && (
                     <>
-                      <textarea
-                        value={msgMap[r.id] || ""}
-                        onChange={(e) => setMsg(r.id, e.target.value)}
-                        placeholder="Mensaje opcional al usuario"
-                        className="w-full border rounded p-2 text-sm"
-                      />
                       <button
-                        onClick={() => advanceStep(r.id)}
-                        className="mt-2 text-sm bg-blue-600 text-white px-2 py-1 rounded"
+                        onClick={() => toggleChatAdmin(r.id)}
+                        className="mt-2 text-sm bg-sky-600 text-white px-2 py-1 rounded"
                       >
-                        Guardar y enviar
+                        Abrir chat
                       </button>
+                      {chatOpenAdmin[r.id] && (
+                        <ChatPopup reqId={r.id} onClose={() => toggleChatAdmin(r.id)} />
+                      )}
                     </>
                   )}
-                  {/* Always show file input after textarea */}
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={e => {
-                      const file = e.target.files[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = ev => setFile(r.id, ev.target.result);
-                      reader.readAsDataURL(file);
-                    }}
-                    className="text-sm mt-2"
-                  />
                   {Object.entries(r.details || {}).map(([k,v]) =>
                     v.userReply ? (
                       <p key={k} className="text-xs mt-1">
