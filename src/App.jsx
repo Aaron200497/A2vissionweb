@@ -9,7 +9,11 @@ import {
   onSnapshot,
   addDoc,
   auth,
-  db
+  db,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification
 } from "./firebase";
 
 function ChatPopup({ reqId, onClose }) {
