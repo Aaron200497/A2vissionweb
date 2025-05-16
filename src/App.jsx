@@ -1883,6 +1883,11 @@ function AdminPanel() {
       const listRef = useRef(list);
 
       const [open, setOpen] = useState({});
+      // Lista filtrada según el texto de búsqueda
+      const filtered = list.filter(u =>
+        u.email.toLowerCase().includes(search.toLowerCase()) ||
+        (u.name || "").toLowerCase().includes(search.toLowerCase())
+      );
       // ─ Modal «añadir suscripción» ─
 const [showSubModal, setShowSubModal] = useState(false);
 const [subEmail,      setSubEmail]    = useState("");
