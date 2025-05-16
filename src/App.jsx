@@ -115,25 +115,6 @@ import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } fro
   Firebase
 ──────────────────────────*/
 // Firebase helpers + db instance
-import {
-  db,
-  collection,
-  doc,
-  getDoc,
-  addDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-  query,
-  where,
-  auth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  sendEmailVerification
-} from "./firebase";
 
 
 
