@@ -1883,6 +1883,33 @@ function AdminPanel() {
       const listRef = useRef(list);
 
       const [open, setOpen] = useState({});
+      // ─ Modal «añadir suscripción» ─
+const [showSubModal, setShowSubModal] = useState(false);
+const [subEmail,      setSubEmail]    = useState("");
+const [subPlan,       setSubPlan]     = useState(ALL_PLANS[0].slug);
+
+const openSubModal = (email) => {
+  setSubEmail(email);
+  setSubPlan(ALL_PLANS[0].slug);
+  setShowSubModal(true);
+};
+
+const saveNewSub = async () => {
+  if (!subEmail || !subPlan) {
+    alert("Completa todos los campos.");
+    return;
+  }
+  const list = await loadSubscriptions();
+  list.push({
+    id: Date.now().toString(),
+    email: subEmail.trim(),
+    plan: subPlan,
+    start: new Date().toISOString(),
+  });
+  await saveSubscriptions(list);      // Firestore + localStorage
+  alert("Suscripción asignada");
+  setShowSubModal(false);
+};
 
       useEffect(() => {
         let timer;                       // debounce 200 ms
@@ -1909,19 +1936,26 @@ function AdminPanel() {
 
       const deleteUser = async (email) => {
         if (!window.confirm("¿Eliminar usuario?")) return;
+
+        let borradoEnFirestore = false;
         try {
-          // Remove from Firestore and update UI
           await deleteDoc(doc(db, "users", email));
+          borradoEnFirestore = true;
         } catch (e) {
-          console.error(e);
-          alert("No se pudo eliminar");
+          if (e.code !== "permission-denied") {
+            console.error(e);
+            alert("No se pudo eliminar");
+            return;
+          }
+          console.warn("permission-denied → borramos solo localStorage");
         }
+      
+        const nuevaLista = listRef.current.filter(u => u.email !== email);
+        localStorage.setItem("users", JSON.stringify(nuevaLista));
+        setList(nuevaLista);
+      
+        if (borradoEnFirestore) alert("Usuario eliminado");
       };
-
-      const filtered = list
-        .filter(u => u.email.toLowerCase().includes(search.toLowerCase()))
-        .sort((a, b) => a.email.localeCompare(b.email));
-
       // For requests and subs info
       const [reqs, setReqs] = useState([]);
       const [subs, setSubs] = useState([]);
@@ -1960,19 +1994,55 @@ function AdminPanel() {
                 {u.email} ({u.role})
               </span>
               <div className="space-x-2 mt-2 md:mt-0">
-                <button
-                  onClick={() => deleteUser(u.email)}
-                  className="px-2 py-1 rounded bg-red-600 text-white"
-                >
-                  Eliminar
-                </button>
-                <button
-                  onClick={() => setOpen({ ...open, [u.email]: !open[u.email] })}
-                  className="px-2 py-1 rounded bg-blue-600 text-white"
-                >
-                  Detalles
-                </button>
-              </div>
+  <button
+    onClick={() => openSubModal(u.email)}
+    className="px-2 py-1 rounded bg-green-600 text-white"
+  >
+    Añadir&nbsp;sub
+  </button>
+  <button
+    onClick={() => deleteUser(u.email)}
+    className="px-2 py-1 rounded bg-red-600 text-white"
+  >
+    Eliminar
+  </button>
+  <button
+    onClick={() => setOpen({ ...open, [u.email]: !open[u.email] })}
+    className="px-2 py-1 rounded bg-blue-600 text-white"
+  >
+    Detalles
+  </button>
+</div>
+{showSubModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded space-y-3 w-80">
+      <h4 className="font-semibold text-lg">Nueva suscripción</h4>
+
+      <input
+        type="email"
+        value={subEmail}
+        onChange={e => setSubEmail(e.target.value)}
+        placeholder="Email usuario"
+        className="w-full border p-2 rounded"
+      />
+
+      <select
+        value={subPlan}
+        onChange={e => setSubPlan(e.target.value)}
+        className="w-full border p-2 rounded"
+      >
+        {ALL_PLANS.map(p => (
+          <option key={p.slug} value={p.slug}>{p.name}</option>
+        ))}
+      </select>
+
+      <div className="flex justify-end space-x-2">
+        <button onClick={() => setShowSubModal(false)} className="px-3 py-1">Cancelar</button>
+        <button onClick={saveNewSub} className="bg-sky-600 text-white px-3 py-1 rounded">Guardar</button>
+      </div>
+    </div>
+  </div>
+)}
               {open[u.email] && (
                 <ul className="text-xs mt-1 pl-4 list-disc w-full md:w-auto">
                   <li>Tel: {u.phone || '-'}</li>
