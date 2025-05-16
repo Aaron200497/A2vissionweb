@@ -1435,6 +1435,11 @@ function UserRequests() {
   const { user } = useAuth();
   useEffect(() => {
     if (!user) return;
+    // Carga inicial de solicitudes desde localStorage
+    loadRequests().then(list => {
+      const filtered = list.filter(r => r.userEmail === user.email);
+      setReqs(filtered);
+    });
 
     const q = query(
       collection(db, "requests"),
@@ -1449,7 +1454,14 @@ function UserRequests() {
         localStorage.setItem("requests", JSON.stringify(list));
         setReqs(list);
       },
-      err => console.error("onSnapshot requests-user", err)
+      err => {
+        console.error("onSnapshot requests-user", err);
+        // Fallback: carga desde localStorage si falla el realtime
+        loadRequests().then(list => {
+          const filtered = list.filter(r => r.userEmail === user.email);
+          setReqs(filtered);
+        });
+      }
     );
 
     return () => unsubscribe();
