@@ -356,8 +356,6 @@ function RefundPolicy() {
 }
 
 export default function App() {
-  // crea admin en el primer render
-  useRef(loadUsers()).current;
   return (
     <AuthProvider>
       <Router>
@@ -1317,20 +1315,27 @@ function UserRequests() {
     alert("Respuesta guardada");
   };
 
-  const { user } = useAuth();   // ← nuevo
+  const { user } = useAuth();
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, "requests"), where("userEmail", "==", user.email));
-    const unsub = onSnapshot(
+
+    const q = query(
+      collection(db, "requests"),
+      where("userEmail", "==", user.email)
+    );
+
+    // realtime subscription without flashes
+    const unsubscribe = onSnapshot(
       q,
       snap => {
         const list = snap.docs.map(d => d.data());
-        saveRequests(list);
+        localStorage.setItem("requests", JSON.stringify(list));
         setReqs(list);
       },
-      err => console.error("onSnapshot requests (user)", err)
+      err => console.error("onSnapshot requests-user", err)
     );
-    return () => unsub();
+
+    return () => unsubscribe();
   }, [user]);
 
   return (
@@ -1880,33 +1885,26 @@ function AdminPanel() {
       const [open, setOpen] = useState({});
 
       useEffect(() => {
-        let first = true;
-        const unsub = onSnapshot(
+        let timer;                       // debounce 200 ms
+
+        return onSnapshot(
           collection(db, "users"),
           snap => {
-            const arr = snap.docs
-              // ignoramos eco local para evitar parpadeos
-              .filter(d => !d.metadata.hasPendingWrites)
-              .map(d => d.data());
+            const fresh = snap.docs.map(d => d.data());
 
-            // aseguramos cuenta admin en memoria
-            if (!arr.find(u => u.email === ADMIN_ACCOUNT.email)) {
-              arr.push(ADMIN_ACCOUNT);
+            if (!fresh.find(u => u.email === ADMIN_ACCOUNT.email)) {
+              fresh.push(ADMIN_ACCOUNT);
             }
 
-            // solo redibujamos si realmente cambian los datos
-            if (first || JSON.stringify(arr) !== JSON.stringify(listRef.current)) {
-              const prevOpen = { ...open };
-              localStorage.setItem("users", JSON.stringify(arr));
-              listRef.current = arr;
-              setList(arr);
-              setOpen(prevOpen);
-            }
-            first = false;
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+              localStorage.setItem("users", JSON.stringify(fresh));
+              listRef.current = fresh;
+              setList(fresh);
+            }, 200);
           },
           err => console.error("onSnapshot users", err)
         );
-        return () => unsub();
       }, []);
 
       const deleteUser = async (email) => {
@@ -2002,14 +2000,33 @@ function AdminPanel() {
   function SubscriptionsPanel() {
     const [subs, setSubs] = useState([]);
     const [showModal, setShowModal] = useState(false);
-    const [email,setEmail]=useState('');
-    const [planSel,setPlanSel]=useState(ALL_PLANS[0].slug);
-    const openModal=()=>setShowModal(true);
-    const saveSub=()=>{
-      if(!email)return alert("Correo obligatorio");
-      const list=[...subs,{id:Date.now().toString(),email,plan:planSel,start:new Date().toISOString()}];
-      saveSubscriptions(list);
-      setSubs(list); setShowModal(false); setEmail(''); setPlanSel(ALL_PLANS[0].slug);
+    const [email, setEmail] = useState('');
+    const [planSel, setPlanSel] = useState(ALL_PLANS[0].slug);
+    const openModal = () => setShowModal(true);
+
+    // assignSubscription per instructions
+    const assignSubscription = async () => {
+      if (!email || !planSel) {
+        alert("Completa todos los campos.");
+        return;
+      }
+
+      const list = await loadSubscriptions();
+      list.push({
+        id: Date.now().toString(),
+        email: email.trim(),
+        plan: planSel,
+        start: new Date().toISOString(),
+      });
+
+      await saveSubscriptions(list);   // wait for Firestore
+      setSubs(list);
+      alert("Suscripción asignada.");
+
+      // reset form + close modal
+      setEmail("");
+      setPlanSel(ALL_PLANS[0].slug);
+      setShowModal(false);
     };
 
     useEffect(() => {
@@ -2035,7 +2052,7 @@ function AdminPanel() {
               </select>
               <div className="flex justify-end space-x-2">
                 <button onClick={()=>setShowModal(false)} className="px-3 py-1">Cancelar</button>
-                <button onClick={saveSub} className="bg-sky-600 text-white px-3 py-1 rounded">Guardar</button>
+                <button onClick={assignSubscription} className="bg-sky-600 text-white px-3 py-1 rounded">Guardar</button>
               </div>
             </div>
           </div>
