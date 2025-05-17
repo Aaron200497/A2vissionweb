@@ -25,14 +25,18 @@ import {
 } from "./firebase";
 
 function ChatPopup({ reqId, onClose }) {
+  const { user: authUser } = useAuth();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
   const fileInputRef = useRef(null);
   // Avatares para chat
-  const currentAvatar = auth.currentUser.photoURL || null;
-  const meInitials = auth.currentUser.email.charAt(0).toUpperCase();
-  const otherAvatar = '/img/admin-avatar.png';
+  const currentAvatar = authUser.avatar || null;
+  const meInitials =
+    (
+      (authUser.name?.charAt(0) || '') +
+      (authUser.lastname?.charAt(0) || '')
+    ).toUpperCase() || authUser.email.charAt(0).toUpperCase();
   // Animation on mount
   const [mounted, setMounted] = useState(false);
   const containerRef = useRef(null);
@@ -96,7 +100,7 @@ function ChatPopup({ reqId, onClose }) {
           text,
           attachment: attachmentUrl,
           timestamp: Date.now(),
-          senderName: auth.currentUser.email,
+          senderName: `${authUser.name} ${authUser.lastname}`.trim() || authUser.email,
           senderAvatar: currentAvatar,
         }
       );
