@@ -26,7 +26,8 @@ function ChatPopup({ reqId, onClose }) {
   const [file, setFile] = useState(null);
   const fileInputRef = useRef(null);
   // Avatares para chat
-  const currentAvatar = auth.currentUser.photoURL || '/img/default-avatar.png';
+  const currentAvatar = auth.currentUser.photoURL || null;
+  const meInitials = auth.currentUser.email.charAt(0).toUpperCase();
   const otherAvatar = '/img/admin-avatar.png';
 
   useEffect(() => {
@@ -86,7 +87,17 @@ function ChatPopup({ reqId, onClose }) {
                 {m.text}
               </div>
               {m.sender === auth.currentUser.uid && (
-                <img src={currentAvatar} alt="Mi avatar" className="w-6 h-6 rounded-full" />
+                currentAvatar ? (
+                  <img
+                    src={currentAvatar}
+                    alt="Mi avatar"
+                    className="w-6 h-6 rounded-full"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold">
+                    {meInitials}
+                  </div>
+                )
               )}
             </div>
             {/* Render attachment below the bubble, aligned to sender */}
@@ -1302,10 +1313,20 @@ function Profile() {
 
   const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const save = () => {
-    const users = loadUsers().map(u => u.email === user.email ? { ...u, ...form } : u);
-    saveUsers(users);
-    login({ ...user, ...form });   // actualiza contexto
+  const save = async () => {
+    // Save avatar to Firestore directly if present, and sync all other fields as before.
+    const allUsers = await loadUsers();
+    const updated = allUsers.map(u =>
+      u.email === user.email ? { ...u, ...form } : u
+    );
+    // Sync to localStorage + Firestore
+    await saveUsers(updated, /* isAdmin= */ false);
+    // Persist avatar field in Firestore document directly
+    if (form.avatar) {
+      await setDoc(doc(db, "users", user.email), { avatar: form.avatar }, { merge: true });
+    }
+    // Update context and UI
+    login({ ...user, ...form });
     alert("Perfil actualizado");
   };
 
