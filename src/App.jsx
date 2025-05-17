@@ -29,6 +29,8 @@ function ChatPopup({ reqId, onClose }) {
   const currentAvatar = auth.currentUser.photoURL || null;
   const meInitials = auth.currentUser.email.charAt(0).toUpperCase();
   const otherAvatar = '/img/admin-avatar.png';
+  // userMeta state for avatars/initials
+  const [userMeta, setUserMeta] = useState({});
 
   useEffect(() => {
     const msgsQuery = query(
@@ -40,6 +42,31 @@ function ChatPopup({ reqId, onClose }) {
     }, err => console.error("Chat onSnapshot:", err));
     return () => unsub();
   }, [reqId]);
+
+  // Load avatars and initials on message change
+  useEffect(() => {
+    const uids = Array.from(new Set(messages.map(m => m.sender)));
+    uids.forEach(uid => {
+      if (userMeta[uid]) return;
+      (async () => {
+        try {
+          const snap = await getDoc(doc(db, "users", uid));
+          if (snap.exists()) {
+            const data = snap.data();
+            setUserMeta(prev => ({
+              ...prev,
+              [uid]: {
+                avatar: data.avatar || null,
+                initials: ((data.name?.charAt(0) || "") + (data.lastname?.charAt(0) || "")).toUpperCase()
+              }
+            }));
+          } else {
+            setUserMeta(prev => ({ ...prev, [uid]: { avatar: null, initials: "?" } }));
+          }
+        } catch (e) { console.error("Error loading user meta:", e); }
+      })();
+    });
+  }, [messages, userMeta]);
 
   const handleSend = async () => {
     if (!text && !file) return;
@@ -73,9 +100,17 @@ function ChatPopup({ reqId, onClose }) {
         {messages.map((m, i) => (
           <div key={i} className="flex flex-col mb-2">
             <div className="flex items-start space-x-2">
-              {m.sender !== auth.currentUser.uid && (
-                <img src={otherAvatar} alt="Avatar" className="w-6 h-6 rounded-full" />
-              )}
+              {(() => {
+                const isMe = m.sender === auth.currentUser.uid;
+                const meta = userMeta[m.sender] || { avatar: isMe ? currentAvatar : null, initials: isMe ? meInitials : "?" };
+                return meta.avatar ? (
+                  <img src={meta.avatar} alt="Avatar" className="w-6 h-6 rounded-full" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold">
+                    {meta.initials}
+                  </div>
+                );
+              })()}
               <div
                 className={`inline-block p-1 bg-gray-100 rounded text-sm max-w-[75%] ${
                   m.sender === auth.currentUser.uid ? 'ml-auto' : ''
@@ -86,19 +121,6 @@ function ChatPopup({ reqId, onClose }) {
                 </div>
                 {m.text}
               </div>
-              {m.sender === auth.currentUser.uid && (
-                currentAvatar ? (
-                  <img
-                    src={currentAvatar}
-                    alt="Mi avatar"
-                    className="w-6 h-6 rounded-full"
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold">
-                    {meInitials}
-                  </div>
-                )
-              )}
             </div>
             {/* Render attachment below the bubble, aligned to sender */}
             {m.attachment && (
