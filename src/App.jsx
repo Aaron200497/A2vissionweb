@@ -28,11 +28,6 @@ function ChatPopup({ reqId, onClose }) {
   const { user: authUser } = useAuth();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
-  const [file, setFile] = useState(null);
-  const [fileName, setFileName] = useState("");
-  const [fileLoading, setFileLoading] = useState(false);
-  const [sending, setSending] = useState(false);
-  const fileInputRef = useRef(null);
   // Avatares para chat
   const currentAvatar = authUser.avatar || null;
   const meInitials =
@@ -89,23 +84,9 @@ function ChatPopup({ reqId, onClose }) {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!text && !file) return;
-    setSending(true);
-    // Capture current inputs
-    const messageText = text;
-    const fileData = file;
-    // Optimistically clear inputs
+    if (!text) return;
     setText("");
-    setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
     try {
-      let attachmentUrl = null;
-      if (fileData) {
-        const fileRef = storageRef(storage, `requests/${reqId}/${Date.now()}`);
-        await uploadString(fileRef, fileData, 'data_url');
-        attachmentUrl = await getDownloadURL(fileRef);
-      }
-      // Send to Firestore
       const nameParts = [];
       if (authUser.name) nameParts.push(authUser.name);
       if (authUser.lastname) nameParts.push(authUser.lastname);
@@ -116,19 +97,15 @@ function ChatPopup({ reqId, onClose }) {
         collection(db, "requests", reqId, "messages"),
         {
           sender: auth.currentUser.uid,
-          text: messageText,
-          attachment: attachmentUrl,
+          text,
           timestamp: Date.now(),
           senderName: fullName,
           senderAvatar: currentAvatar,
         }
       );
-      setSending(false);
     } catch (err) {
       console.error("Error sending chat message:", err);
       alert("Error enviando mensaje: " + err.message);
-      setSending(false);
-      return;
     }
   };
 
@@ -212,69 +189,12 @@ function ChatPopup({ reqId, onClose }) {
           placeholder="Escribe un mensaje"
           className="flex-1 border rounded p-1 text-sm"
         />
-        <input
-          type="file"
-          name="attachment"
-          accept="image/*,application/pdf"
-          ref={fileInputRef}
-          onChange={e => {
-            const f = e.target.files[0];
-            if (f) {
-              setFileLoading(true);
-              setFileName(f.name);
-              const reader = new FileReader();
-              reader.onload = ev => {
-                setFile(ev.target.result);
-                setFileLoading(false);
-              };
-              reader.readAsDataURL(f);
-            }
-          }}
-          className="hidden"
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current.click()}
-          className="text-xl"
-          title="Adjuntar archivo"
-        >
-          📎
-        </button>
-        <div className="flex flex-col mt-1">
-          {fileLoading && (
-            <span className="text-xs text-slate-500">Cargando {fileName}...</span>
-          )}
-          {!fileLoading && file && (
-            <div className="flex items-center space-x-2 text-xs">
-              {file.startsWith("data:image") ? (
-                <img
-                  src={file}
-                  alt={fileName}
-                  className="max-w-[4rem] max-h-[4rem] rounded"
-                />
-              ) : (
-                <span className="underline">{fileName}</span>
-              )}
-              <button
-                onClick={() => {
-                  setFile(null);
-                  setFileName("");
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-                className="text-red-500"
-              >
-                ✕
-              </button>
-            </div>
-          )}
-        </div>
         <button
           onClick={handleSend}
-          disabled={sending}
-          className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-full font-semibold shadow-lg disabled:opacity-50"
+          className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-full font-semibold shadow-lg"
           title="Enviar mensaje"
         >
-          {sending ? 'Enviando...' : '✈️ Enviar'}
+          ✈️ Enviar
         </button>
       </div>
     </div>
