@@ -25,6 +25,9 @@ function ChatPopup({ reqId, onClose }) {
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
   const fileInputRef = useRef(null);
+  // Avatares para chat
+  const currentAvatar = auth.currentUser.photoURL || '/img/default-avatar.png';
+  const otherAvatar = '/img/admin-avatar.png';
 
   useEffect(() => {
     const msgsQuery = query(
@@ -67,17 +70,39 @@ function ChatPopup({ reqId, onClose }) {
       </div>
       <div className="flex-1 p-2 overflow-y-auto space-y-2">
         {messages.map((m, i) => (
-          <div
-            key={i}
-            className={m.sender === auth.currentUser.uid ? "text-right" : "text-left"}
-          >
-            <div className="text-xs font-semibold mb-1">
-              {m.sender === auth.currentUser.uid ? "Tú" : "Interlocutor"}
+          <div key={i} className="flex flex-col mb-2">
+            <div className="flex items-start space-x-2">
+              {m.sender !== auth.currentUser.uid && (
+                <img src={otherAvatar} alt="Avatar" className="w-6 h-6 rounded-full" />
+              )}
+              <div
+                className={`inline-block p-1 bg-gray-100 rounded text-sm max-w-[75%] ${
+                  m.sender === auth.currentUser.uid ? 'ml-auto' : ''
+                }`}
+              >
+                <div className="text-xs font-semibold mb-1">
+                  {m.sender === auth.currentUser.uid ? 'Tú' : 'Interlocutor'}
+                </div>
+                {m.text}
+              </div>
+              {m.sender === auth.currentUser.uid && (
+                <img src={currentAvatar} alt="Mi avatar" className="w-6 h-6 rounded-full" />
+              )}
             </div>
-            <div className="inline-block p-1 bg-gray-100 rounded text-sm">
-              {m.text}
-              {m.attachment && (
-                <div>
+            {/* Render attachment below the bubble, aligned to sender */}
+            {m.attachment && (
+              <div
+                className={`w-full flex ${
+                  m.sender === auth.currentUser.uid ? 'justify-end' : 'justify-start'
+                } mt-1`}
+              >
+                {m.attachment.startsWith("data:image") ? (
+                  <img
+                    src={m.attachment}
+                    alt="Adjunto"
+                    className="max-w-full max-h-40 rounded"
+                  />
+                ) : (
                   <a
                     href={m.attachment}
                     target="_blank"
@@ -86,9 +111,9 @@ function ChatPopup({ reqId, onClose }) {
                   >
                     Ver adjunto
                   </a>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -1383,36 +1408,10 @@ function ProgressLine({ step, onClickStep }) {
 
 function UserRequests() {
   const [reqs, setReqs] = useState([]);
-  const [showDetailsUser, setShowDetailsUser] = useState({});
   const [userReplyMap, setUserReplyMap] = useState({});
   const [chatOpenUser, setChatOpenUser] = useState({});
   const toggleChatUser = id =>
     setChatOpenUser(prev => ({ ...prev, [id]: !prev[id] }));
-
-  // Toggle logic for step details
-  const toggleStepDetails = (id, idx) => {
-    setShowDetailsUser(prev => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] || {}),
-        [idx]: !prev[id]?.[idx],
-      }
-    }));
-    // If unread, mark as read and persist
-    let reqList = loadRequests();
-    let changed = false;
-    reqList = reqList.map(r => {
-      if (r.id === id && r.unread) {
-        changed = true;
-        return { ...r, unread: false };
-      }
-      return r;
-    });
-    if (changed) {
-      saveRequests(reqList);
-      setReqs(reqList);
-    }
-  };
 
   const removeUserRequest = (id) => {
     const list = loadRequests().filter(r => r.id !== id);
@@ -1490,13 +1489,12 @@ function UserRequests() {
             <h4 className="font-semibold">
               {ALL_PLANS.find((p) => p.slug === r.plan)?.name}
             </h4>
-            {/* Chat icon to open chat */}
+            {/* Centered "Abrir chat" button */}
             <button
               onClick={() => toggleChatUser(r.id)}
-              className="ml-auto text-2xl hover:text-sky-600"
-              title="Abrir chat"
+              className="ml-auto bg-sky-600 text-white px-3 py-1 rounded"
             >
-              💬
+              Abrir chat
             </button>
             {/* Red dot if unread */}
             {r.unread && (
@@ -1506,39 +1504,7 @@ function UserRequests() {
           {r.step >= 0 ? (
             <>
               <p className="text-xs text-slate-500">{steps[r.step]}</p>
-              <ProgressLine
-                step={r.step}
-                onClickStep={(idx) => toggleStepDetails(r.id, idx)}
-              />
-              {/* Inline details under each step's bubble */}
-              {steps.map((s, idx) =>
-                showDetailsUser[r.id]?.[idx] ? (
-                  <div key={idx} className="mt-2 p-2 bg-slate-50 rounded">
-                    <p className="text-sm font-semibold">Detalles de “{s}”</p>
-                    {r.details?.[idx]?.message ? (
-                      <p className="text-sm mb-1">
-                        <strong>Mensaje admin:</strong> {r.details[idx].message}
-                      </p>
-                    ) : (
-                      <p className="text-sm italic text-slate-500">
-                        Sin mensaje para este paso.
-                      </p>
-                    )}
-                    {/* Download attachment already present */}
-                    {r.details?.[idx]?.attachment && (
-                      <a
-                        href={r.details[idx].attachment}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-sky-600 hover:underline"
-                      >
-                        Descargar archivo
-                      </a>
-                    )}
-                  </div>
-                ) : null
-              )}
-              {/* Remove "Ver detalles" button with bell icon */}
+              <ProgressLine step={r.step} />
             </>
           ) : (
             <p className="text-xs text-red-600">Rechazado</p>
@@ -1906,13 +1872,12 @@ function AdminPanel() {
                       ? `paso ${r.step + 1}/${steps.length}`
                       : "Rechazado"}
                   </span>
-                  {/* Chat icon */}
+                  {/* Centered "Abrir chat" button */}
                   <button
                     onClick={() => toggleChatAdmin(r.id)}
-                    className="text-2xl hover:text-sky-600 ml-2"
-                    title="Abrir chat"
+                    className="ml-auto bg-sky-600 text-white px-3 py-1 rounded"
                   >
-                    💬
+                    Abrir chat
                   </button>
                   <div className="space-x-2">
                     {r.step >= 0 && r.step < steps.length - 1 && (
@@ -1958,31 +1923,6 @@ function AdminPanel() {
                   {r.name} {r.lastname}<br/>
                   {r.message}
                 </p>
-                <button
-                  onClick={() => setShowDetails({ ...showDetails, [r.id]: !showDetails[r.id] })}
-                  className="text-sm underline flex items-center"
-                >
-                  {showDetails[r.id] ? 'Ocultar detalles' : 'Ver detalles'}
-                  {Object.keys(r.details || {}).length > 0 && (
-                    <span className="ml-1 text-blue-600" title="Tienes nuevos mensajes o archivos">
-                      📩
-                    </span>
-                  )}
-                </button>
-                <div className={showDetails[r.id] ? '' : 'hidden'}>
-                  {r.step >= 0 && (
-                    <>
-                      {/* Remove old chat button; chat icon is now always present */}
-                    </>
-                  )}
-                  {Object.entries(r.details || {}).map(([k,v]) =>
-                    v.userReply ? (
-                      <p key={k} className="text-xs mt-1">
-                        <strong>Usuario&nbsp;({steps[k]}):</strong> {v.userReply}
-                      </p>
-                    ) : null
-                  )}
-                </div>
               </div>
             ))}
           </div>
@@ -2356,45 +2296,11 @@ function PlanDetail() {
             Guardar condiciones
           </button>
           <div className="space-y-2 mt-4">
-            <label className="block text-sm">Imagen del plan:</label>
-            {img && <img src={img} alt="plan" className="max-h-40 mb-2" />}
-            <input type="file" accept="image/*" onChange={e=>{
-              const f=e.target.files[0]; if(!f) return;
-              const r=new FileReader();
-              r.onload=ev=>{
-                setImg(ev.target.result);
-                localStorage.setItem(imgKey,ev.target.result);
-                savePlanMeta(slug,{img: ev.target.result});
-              };
-              r.readAsDataURL(f);
-            }}/>
-            <label className="inline-flex items-center">
-              <input type="checkbox" checked={visible} onChange={e=>{
-                setVisible(e.target.checked);
-                localStorage.setItem(visKey,e.target.checked?'1':'0');
-                savePlanMeta(slug,{visible: e.target.checked});
-              }} className="mr-2"/>
-              Mostrar a usuarios
-            </label>
+            <label className="block text-sm font-medium">Imagen del plan:</label>
+            {/* Aquí iría el input de archivo y controles de visibilidad */}
           </div>
         </>
       )}
-      <Link
-        to={`/solicitar/${slug}`}
-        className="block mt-4 py-2 bg-sky-600 text-white text-center rounded hover:bg-sky-700"
-      >
-        Solicitar este plan
-      </Link>
-    </section>
-  );
-}
-
-// AI Test route
-function AiTest() {
-  return (
-    <section className="container mx-auto px-4 py-16 text-center">
-      <h2 className="text-3xl font-bold mb-4">Laboratorio IA (solo admins)</h2>
-      <p className="text-slate-600">Aquí aparecerán las pruebas internas de la futura IA.</p>
     </section>
   );
 }
