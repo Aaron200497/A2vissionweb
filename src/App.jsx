@@ -174,9 +174,12 @@ function ChatPopup({ reqId, onClose }) {
           );
         })}
       </div>
-      <div className="p-2 border-t flex space-x-1">
+      <form
+        autoComplete="off"
+        onSubmit={e => { e.preventDefault(); handleSend(); }}
+        className="p-2 border-t flex space-x-1"
+      >
         <input
-          name="message"
           type="text"
           autoComplete="off"
           spellCheck="false"
@@ -194,13 +197,13 @@ function ChatPopup({ reqId, onClose }) {
           className="flex-1 border rounded p-1 text-sm"
         />
         <button
-          onClick={handleSend}
+          type="submit"
           className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-full font-semibold shadow-lg"
           title="Enviar mensaje"
         >
           ✈️ Enviar
         </button>
-      </div>
+      </form>
     </div>
   );
 }
