@@ -74,6 +74,8 @@ function ChatPopup({ reqId, onClose }) {
           text,
           attachment: attachmentUrl,
           timestamp: Date.now(),
+          senderName: auth.currentUser.email,
+          senderAvatar: currentAvatar,
         }
       );
     } catch (err) {
@@ -110,7 +112,11 @@ function ChatPopup({ reqId, onClose }) {
               className={`flex items-start mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}
             >
               { !isMe && (
-                <img src={otherAvatar} alt="Avatar" className="w-6 h-6 rounded-full mr-2" />
+                <img
+                  src={m.senderAvatar || otherAvatar}
+                  alt={m.senderName || 'Usuario'}
+                  className="w-6 h-6 rounded-full mr-2"
+                />
               ) }
               <div
                 className={`inline-block p-2 rounded text-sm max-w-[75%] ${
@@ -120,13 +126,17 @@ function ChatPopup({ reqId, onClose }) {
                 <div className={`text-xs font-semibold mb-1 ${isMe ? 'text-white' : 'text-gray-700'}`}>
                   {isMe
                     ? 'Tú'
-                    : 'Interlocutor'}
+                    : m.senderName || 'Usuario'}
                 </div>
                 {m.text}
               </div>
               { isMe && (
-                currentAvatar ? (
-                  <img src={currentAvatar} alt="Mi avatar" className="w-6 h-6 rounded-full ml-2" />
+                (m.senderAvatar || currentAvatar) ? (
+                  <img
+                    src={m.senderAvatar || currentAvatar}
+                    alt="Mi avatar"
+                    className="w-6 h-6 rounded-full ml-2"
+                  />
                 ) : (
                   <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold ml-2">
                     {meInitials}
