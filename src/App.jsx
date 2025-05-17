@@ -29,8 +29,6 @@ function ChatPopup({ reqId, onClose }) {
   const currentAvatar = auth.currentUser.photoURL || null;
   const meInitials = auth.currentUser.email.charAt(0).toUpperCase();
   const otherAvatar = '/img/admin-avatar.png';
-  // userMeta state for avatars/initials
-  const [userMeta, setUserMeta] = useState({});
   // Animation on mount
   const [mounted, setMounted] = useState(false);
   const containerRef = useRef(null);
@@ -49,31 +47,6 @@ function ChatPopup({ reqId, onClose }) {
     return () => unsub();
   }, [reqId]);
 
-  // Load avatars, initials, and displayName on message change
-  useEffect(() => {
-    const uids = Array.from(new Set(messages.map(m => m.sender)));
-    uids.forEach(uid => {
-      if (userMeta[uid]) return;
-      (async () => {
-        try {
-          const snap = await getDoc(doc(db, "users", uid));
-          if (snap.exists()) {
-            const data = snap.data();
-            setUserMeta(prev => ({
-              ...prev,
-              [uid]: {
-                avatar: data.avatar || null,
-                initials: ((data.name?.charAt(0) || "") + (data.lastname?.charAt(0) || "")).toUpperCase(),
-                displayName: data.name && data.lastname ? `${data.name} ${data.lastname}` : data.email || "Usuario"
-              }
-            }));
-          } else {
-            setUserMeta(prev => ({ ...prev, [uid]: { avatar: null, initials: "?" } }));
-          }
-        } catch (e) { console.error("Error loading user meta:", e); }
-      })();
-    });
-  }, [messages, userMeta]);
   // Auto-scroll on new message
   useEffect(() => {
     if (containerRef.current) {
@@ -121,17 +94,9 @@ function ChatPopup({ reqId, onClose }) {
               key={i}
               className={`flex items-start mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}
             >
-              { !isMe && (() => {
-                  const meta = userMeta[m.sender] || { avatar: null, initials: '?' };
-                  return meta.avatar ? (
-                    <img src={meta.avatar} alt="Avatar" className="w-6 h-6 rounded-full mr-2" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold mr-2">
-                      {meta.initials}
-                    </div>
-                  );
-                })()
-              }
+              { !isMe && (
+                <img src={otherAvatar} alt="Avatar" className="w-6 h-6 rounded-full mr-2" />
+              ) }
               <div
                 className={`inline-block p-2 rounded text-sm max-w-[75%] ${
                   isMe ? 'bg-sky-600 text-white' : 'bg-gray-200 text-black'
@@ -140,21 +105,19 @@ function ChatPopup({ reqId, onClose }) {
                 <div className={`text-xs font-semibold mb-1 ${isMe ? 'text-white' : 'text-gray-700'}`}>
                   {isMe
                     ? 'Tú'
-                    : userMeta[m.sender]?.displayName || 'Interlocutor'}
+                    : 'Interlocutor'}
                 </div>
                 {m.text}
               </div>
-              { isMe && (() => {
-                  const meta = userMeta[m.sender] || { avatar: currentAvatar, initials: meInitials };
-                  return meta.avatar ? (
-                    <img src={meta.avatar} alt="Mi avatar" className="w-6 h-6 rounded-full ml-2" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold ml-2">
-                      {meta.initials}
-                    </div>
-                  );
-                })()
-              }
+              { isMe && (
+                currentAvatar ? (
+                  <img src={currentAvatar} alt="Mi avatar" className="w-6 h-6 rounded-full ml-2" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold ml-2">
+                    {meInitials}
+                  </div>
+                )
+              ) }
             </div>
           );
         })}
