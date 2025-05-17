@@ -43,7 +43,7 @@ function ChatPopup({ reqId, onClose }) {
     return () => unsub();
   }, [reqId]);
 
-  // Load avatars and initials on message change
+  // Load avatars, initials, and displayName on message change
   useEffect(() => {
     const uids = Array.from(new Set(messages.map(m => m.sender)));
     uids.forEach(uid => {
@@ -57,7 +57,8 @@ function ChatPopup({ reqId, onClose }) {
               ...prev,
               [uid]: {
                 avatar: data.avatar || null,
-                initials: ((data.name?.charAt(0) || "") + (data.lastname?.charAt(0) || "")).toUpperCase()
+                initials: ((data.name?.charAt(0) || "") + (data.lastname?.charAt(0) || "")).toUpperCase(),
+                displayName: data.name && data.lastname ? `${data.name} ${data.lastname}` : data.email || "Usuario"
               }
             }));
           } else {
@@ -112,12 +113,16 @@ function ChatPopup({ reqId, onClose }) {
                 );
               })()}
               <div
-                className={`inline-block p-1 bg-gray-100 rounded text-sm max-w-[75%] ${
-                  m.sender === auth.currentUser.uid ? 'ml-auto' : ''
+                className={`inline-block p-2 rounded text-sm max-w-[75%] ${
+                  m.sender === auth.currentUser.uid
+                    ? 'ml-auto bg-sky-600 text-white'
+                    : 'bg-gray-200 text-black'
                 }`}
               >
                 <div className="text-xs font-semibold mb-1">
-                  {m.sender === auth.currentUser.uid ? 'Tú' : 'Interlocutor'}
+                  {m.sender === auth.currentUser.uid
+                    ? 'Tú'
+                    : userMeta[m.sender]?.displayName || 'Interlocutor'}
                 </div>
                 {m.text}
               </div>
