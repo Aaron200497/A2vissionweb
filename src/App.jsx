@@ -178,6 +178,10 @@ function ChatPopup({ reqId, onClose }) {
         <input
           name="message"
           type="text"
+          autoComplete="off"
+          spellCheck="false"
+          autoCorrect="off"
+          autoCapitalize="off"
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => {
@@ -1268,6 +1272,7 @@ function Login() {
           <input
             type="email"
             name="email"
+            autoComplete="email"
             value={form.email}
             onChange={handleChange}
             required
@@ -1277,6 +1282,7 @@ function Login() {
           <input
             type="password"
             name="password"
+            autoComplete="current-password"
             value={form.password}
             onChange={handleChange}
             required
