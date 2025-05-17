@@ -1502,7 +1502,7 @@ function UserRequests() {
             {/* Centered "Abrir chat" button */}
             <button
               onClick={() => toggleChatUser(r.id)}
-              className="ml-auto bg-sky-600 text-white px-3 py-1 rounded"
+              className="ml-auto text-sm bg-sky-600 text-white px-2 py-1 rounded"
             >
               Abrir chat
             </button>
@@ -1885,7 +1885,7 @@ function AdminPanel() {
                   {/* Centered "Abrir chat" button */}
                   <button
                     onClick={() => toggleChatAdmin(r.id)}
-                    className="ml-auto bg-sky-600 text-white px-3 py-1 rounded"
+                    className="text-sm bg-sky-600 text-white px-2 py-1 rounded"
                   >
                     Abrir chat
                   </button>
