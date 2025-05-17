@@ -40,6 +40,10 @@ function ChatPopup({ reqId, onClose }) {
   // Animation on mount
   const [mounted, setMounted] = useState(false);
   const containerRef = useRef(null);
+
+  // --- Reintroduce userMeta state ---
+  const [userMeta, setUserMeta] = useState({});
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -55,6 +59,24 @@ function ChatPopup({ reqId, onClose }) {
     return () => unsub();
   }, [reqId]);
 
+  // --- Fetch user full names for chat participants ---
+  useEffect(() => {
+    const uids = Array.from(new Set(messages.map(m => m.sender)));
+    uids.forEach(uid => {
+      if (uid === auth.currentUser.uid || userMeta[uid]) return;
+      getDoc(doc(db, "users", uid))
+        .then(snap => {
+          if (snap.exists()) {
+            const data = snap.data();
+            const fullName = data.role === "admin"
+              ? "Equipo A² Vission"
+              : `${data.name || ""} ${data.lastname || ""}`.trim() || data.email;
+            setUserMeta(prev => ({ ...prev, [uid]: fullName }));
+          }
+        })
+        .catch(console.error);
+    });
+  }, [messages, userMeta]);
 
   // Auto-scroll on new message
   useEffect(() => {
@@ -137,10 +159,7 @@ function ChatPopup({ reqId, onClose }) {
                 <div className={`text-xs font-semibold mb-1 ${isMe ? 'text-white' : 'text-gray-700'}`}>
                   {isMe
                     ? 'Tú'
-                    : (m.senderName === 'website@a2vission.com'
-                        ? 'Equipo A² Vission'
-                        : m.senderName
-                      )}
+                    : (userMeta[m.sender] || m.senderName || 'Usuario')}
                 </div>
                 {m.text}
               </div>
