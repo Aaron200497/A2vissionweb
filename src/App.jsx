@@ -208,7 +208,7 @@ function ChatPopup({ reqId, onClose }) {
   );
 }
 import emailjs from "@emailjs/browser";
-import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, NavLink as RRNavLink, Link, useParams, useNavigate } from "react-router-dom";
 
 // Stub for the AI sandbox route
 function AiTest() {
@@ -606,7 +606,7 @@ function NavBar() {
   }, [user]);
 
   return (
-    <header className="bg-white shadow">
+    <header className="sticky top-0 z-50 bg-white shadow">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-2">
           <img src="/img/logo.png" alt="A² Vission" className="h-10 w-10" />
@@ -699,9 +699,17 @@ function NavBar() {
 }
 
 const NavLink = ({ to, children }) => (
-  <Link to={to} className="text-slate-700 hover:text-sky-600">
+  <RRNavLink
+    to={to}
+    end
+    className={({ isActive }) =>
+      isActive
+        ? 'text-sky-600 font-semibold'
+        : 'text-slate-700 hover:text-sky-600'
+    }
+  >
     {children}
-  </Link>
+  </RRNavLink>
 );
 
 const MobileLink = ({ to, onClick, children }) => (
