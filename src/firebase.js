@@ -1,5 +1,6 @@
 // src/firebase.js
 import { initializeApp } from "firebase/app";
+import { getStorage, ref as storageRef, uploadString, getDownloadURL } from "firebase/storage";
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -36,6 +37,10 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db   = getFirestore(app);
+
+// Firebase Storage
+export const storage = getStorage(app);
+export { storageRef, uploadString, getDownloadURL };
 
 // re-export helpers que usarás
 export {
