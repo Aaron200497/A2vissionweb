@@ -36,6 +36,7 @@ function ChatPopup({ reqId, onClose }) {
   // Animation on mount
   const [mounted, setMounted] = useState(false);
   const containerRef = useRef(null);
+  const [userMeta, setUserMeta] = useState({});
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -50,6 +51,27 @@ function ChatPopup({ reqId, onClose }) {
     }, err => console.error("Chat onSnapshot:", err));
     return () => unsub();
   }, [reqId]);
+
+  useEffect(() => {
+    const uids = Array.from(new Set(messages.map(m => m.sender)));
+    uids.forEach(uid => {
+      if (uid === auth.currentUser.uid || userMeta[uid]) return;
+      (async () => {
+        try {
+          const snap = await getDoc(doc(db, "users", uid));
+          if (snap.exists()) {
+            const data = snap.data();
+            const fullName = data.name && data.lastname
+              ? `${data.name} ${data.lastname}`
+              : data.name || data.email;
+            setUserMeta(prev => ({ ...prev, [uid]: fullName }));
+          }
+        } catch (e) {
+          console.error("Error loading user name:", e);
+        }
+      })();
+    });
+  }, [messages, userMeta]);
 
   // Auto-scroll on new message
   useEffect(() => {
@@ -126,7 +148,7 @@ function ChatPopup({ reqId, onClose }) {
                 <div className={`text-xs font-semibold mb-1 ${isMe ? 'text-white' : 'text-gray-700'}`}>
                   {isMe
                     ? 'Tú'
-                    : m.senderName || 'Usuario'}
+                    : (m.senderName || userMeta[m.sender] || 'Usuario')}
                 </div>
                 {m.text}
               </div>
