@@ -98,62 +98,50 @@ function ChatPopup({ reqId, onClose }) {
         <button onClick={onClose} className="text-xl leading-none">&times;</button>
       </div>
       <div className="flex-1 p-2 overflow-y-auto space-y-2">
-        {messages.map((m, i) => (
-          <div key={i} className="flex flex-col mb-2">
-            <div className="flex items-start space-x-2">
-              {(() => {
-                const isMe = m.sender === auth.currentUser.uid;
-                const meta = userMeta[m.sender] || { avatar: isMe ? currentAvatar : null, initials: isMe ? meInitials : "?" };
-                return meta.avatar ? (
-                  <img src={meta.avatar} alt="Avatar" className="w-6 h-6 rounded-full" />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold">
-                    {meta.initials}
-                  </div>
-                );
-              })()}
+        {messages.map((m, i) => {
+          const isMe = m.sender === auth.currentUser.uid;
+          return (
+            <div
+              key={i}
+              className={`flex items-start mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}
+            >
+              { !isMe && (() => {
+                  const meta = userMeta[m.sender] || { avatar: null, initials: '?' };
+                  return meta.avatar ? (
+                    <img src={meta.avatar} alt="Avatar" className="w-6 h-6 rounded-full mr-2" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold mr-2">
+                      {meta.initials}
+                    </div>
+                  );
+                })()
+              }
               <div
                 className={`inline-block p-2 rounded text-sm max-w-[75%] ${
-                  m.sender === auth.currentUser.uid
-                    ? 'ml-auto bg-sky-600 text-white'
-                    : 'bg-gray-200 text-black'
+                  isMe ? 'bg-sky-600 text-white' : 'bg-gray-200 text-black'
                 }`}
               >
                 <div className="text-xs font-semibold mb-1">
-                  {m.sender === auth.currentUser.uid
+                  {isMe
                     ? 'Tú'
                     : userMeta[m.sender]?.displayName || 'Interlocutor'}
                 </div>
                 {m.text}
               </div>
+              { isMe && (() => {
+                  const meta = userMeta[m.sender] || { avatar: currentAvatar, initials: meInitials };
+                  return meta.avatar ? (
+                    <img src={meta.avatar} alt="Mi avatar" className="w-6 h-6 rounded-full ml-2" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold ml-2">
+                      {meta.initials}
+                    </div>
+                  );
+                })()
+              }
             </div>
-            {/* Render attachment below the bubble, aligned to sender */}
-            {m.attachment && (
-              <div
-                className={`w-full flex ${
-                  m.sender === auth.currentUser.uid ? 'justify-end' : 'justify-start'
-                } mt-1`}
-              >
-                {m.attachment.startsWith("data:image") ? (
-                  <img
-                    src={m.attachment}
-                    alt="Adjunto"
-                    className="max-w-full max-h-40 rounded"
-                  />
-                ) : (
-                  <a
-                    href={m.attachment}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline text-xs"
-                  >
-                    Ver adjunto
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="p-2 border-t flex space-x-1">
         <input
