@@ -134,11 +134,17 @@ function ChatPopup({ reqId, onClose }) {
               className={`flex items-start mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}
             >
               { !isMe && (
-                <img
-                  src={m.senderAvatar || otherAvatar}
-                  alt={m.senderName || 'Usuario'}
-                  className="w-6 h-6 rounded-full mr-2"
-                />
+                m.senderAvatar ? (
+                  <img
+                    src={m.senderAvatar}
+                    alt={m.senderName || ''}
+                    className="w-6 h-6 rounded-full mr-2"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold mr-2">
+                    {(m.senderName || '').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() || '?'}
+                  </div>
+                )
               ) }
               <div
                 className={`inline-block p-2 rounded text-sm max-w-[75%] ${
@@ -153,9 +159,9 @@ function ChatPopup({ reqId, onClose }) {
                 {m.text}
               </div>
               { isMe && (
-                (m.senderAvatar || currentAvatar) ? (
+                m.senderAvatar ? (
                   <img
-                    src={m.senderAvatar || currentAvatar}
+                    src={m.senderAvatar}
                     alt="Mi avatar"
                     className="w-6 h-6 rounded-full ml-2"
                   />
@@ -1564,7 +1570,9 @@ function UserRequests() {
             {/* Centered "Abrir chat" button */}
             <button
               onClick={() => toggleChatUser(r.id)}
-              className="ml-auto text-sm bg-sky-600 text-white px-2 py-1 rounded"
+              className={`ml-auto text-sm bg-sky-600 text-white px-2 py-1 rounded ${
+                r.unread && !chatOpenUser[r.id] ? 'animate-pulse' : ''
+              }`}
             >
               Abrir chat
             </button>
@@ -1947,7 +1955,9 @@ function AdminPanel() {
                   {/* Centered "Abrir chat" button */}
                   <button
                     onClick={() => toggleChatAdmin(r.id)}
-                    className="text-sm bg-sky-600 text-white px-2 py-1 rounded"
+                    className={`text-sm bg-sky-600 text-white px-2 py-1 rounded ${
+                      r.unread && !chatOpenAdmin[r.id] ? 'animate-pulse' : ''
+                    }`}
                   >
                     Abrir chat
                   </button>
