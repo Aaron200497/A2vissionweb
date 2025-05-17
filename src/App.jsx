@@ -31,6 +31,12 @@ function ChatPopup({ reqId, onClose }) {
   const otherAvatar = '/img/admin-avatar.png';
   // userMeta state for avatars/initials
   const [userMeta, setUserMeta] = useState({});
+  // Animation on mount
+  const [mounted, setMounted] = useState(false);
+  const containerRef = useRef(null);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const msgsQuery = query(
@@ -68,6 +74,12 @@ function ChatPopup({ reqId, onClose }) {
       })();
     });
   }, [messages, userMeta]);
+  // Auto-scroll on new message
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSend = async () => {
     if (!text && !file) return;
@@ -92,12 +104,16 @@ function ChatPopup({ reqId, onClose }) {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 h-96 bg-white shadow-lg rounded-lg flex flex-col">
+    <div
+      className={`fixed bottom-4 right-4 w-96 h-96 bg-white shadow-lg rounded-lg flex flex-col
+        transform transition-transform duration-300 ease-out
+        ${mounted ? 'translate-y-0' : 'translate-y-full'}`}
+    >
       <div className="flex justify-between items-center p-2 bg-sky-600 text-white rounded-t-lg">
         <span>Chat solicitud {reqId}</span>
         <button onClick={onClose} className="text-xl leading-none">&times;</button>
       </div>
-      <div className="flex-1 p-2 overflow-y-auto space-y-2">
+      <div ref={containerRef} className="flex-1 p-2 overflow-y-auto space-y-2">
         {messages.map((m, i) => {
           const isMe = m.sender === auth.currentUser.uid;
           return (
@@ -121,7 +137,7 @@ function ChatPopup({ reqId, onClose }) {
                   isMe ? 'bg-sky-600 text-white' : 'bg-gray-200 text-black'
                 }`}
               >
-                <div className="text-xs font-semibold mb-1">
+                <div className={`text-xs font-semibold mb-1 ${isMe ? 'text-white' : 'text-gray-700'}`}>
                   {isMe
                     ? 'Tú'
                     : userMeta[m.sender]?.displayName || 'Interlocutor'}
