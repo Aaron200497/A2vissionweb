@@ -31,6 +31,7 @@ function ChatPopup({ reqId, onClose }) {
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState("");
   const [fileLoading, setFileLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const fileInputRef = useRef(null);
   // Avatares para chat
   const currentAvatar = authUser.avatar || null;
@@ -89,6 +90,7 @@ function ChatPopup({ reqId, onClose }) {
 
   const handleSend = async () => {
     if (!text && !file) return;
+    setSending(true);
     // Capture current inputs
     const messageText = text;
     const fileData = file;
@@ -121,9 +123,12 @@ function ChatPopup({ reqId, onClose }) {
           senderAvatar: currentAvatar,
         }
       );
+      setSending(false);
     } catch (err) {
       console.error("Error sending chat message:", err);
       alert("Error enviando mensaje: " + err.message);
+      setSending(false);
+      return;
     }
   };
 
@@ -225,8 +230,16 @@ function ChatPopup({ reqId, onClose }) {
               reader.readAsDataURL(f);
             }
           }}
-          className="text-sm"
+          className="hidden"
         />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current.click()}
+          className="text-xl"
+          title="Adjuntar archivo"
+        >
+          📎
+        </button>
         <div className="flex flex-col mt-1">
           {fileLoading && (
             <span className="text-xs text-slate-500">Cargando {fileName}...</span>
@@ -257,10 +270,11 @@ function ChatPopup({ reqId, onClose }) {
         </div>
         <button
           onClick={handleSend}
+          disabled={sending}
+          className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-full font-semibold shadow-lg disabled:opacity-50"
           title="Enviar mensaje"
-          className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-full font-semibold shadow-lg"
         >
-          ✈️ Enviar
+          {sending ? 'Enviando...' : '✈️ Enviar'}
         </button>
       </div>
     </div>
