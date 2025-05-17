@@ -194,6 +194,7 @@ function ChatPopup({ reqId, onClose }) {
       </div>
       <div className="p-2 border-t flex space-x-1">
         <input
+          name="message"
           type="text"
           value={text}
           onChange={e => setText(e.target.value)}
@@ -208,6 +209,8 @@ function ChatPopup({ reqId, onClose }) {
         />
         <input
           type="file"
+          name="attachment"
+          accept="image/*,application/pdf"
           ref={fileInputRef}
           onChange={e => {
             const f = e.target.files[0];
@@ -217,11 +220,8 @@ function ChatPopup({ reqId, onClose }) {
               reader.readAsDataURL(f);
             }
           }}
-          className="hidden"
+          className="text-sm"
         />
-        <button onClick={() => fileInputRef.current.click()} className="text-sm px-2">
-          📎
-        </button>
         <button
           onClick={handleSend}
           title="Enviar mensaje"
