@@ -161,6 +161,16 @@ function ChatPopup({ reqId, onClose }) {
 import emailjs from "@emailjs/browser";
 import { HashRouter as Router, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 
+// Stub for the AI sandbox route
+function AiTest() {
+  return (
+    <section className="container mx-auto px-4 py-16">
+      <h2 className="text-3xl font-bold text-center">IA (beta)</h2>
+      <p className="text-center text-slate-500">Próximamente en desarrollo.</p>
+    </section>
+  );
+}
+
 /*──────────────────────────
   Firebase
 ──────────────────────────*/
