@@ -17,7 +17,11 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
-  sendEmailVerification
+  sendEmailVerification,
+  storage,
+  storageRef,
+  uploadString,
+  getDownloadURL
 } from "./firebase";
 
 function ChatPopup({ reqId, onClose }) {
@@ -57,20 +61,31 @@ function ChatPopup({ reqId, onClose }) {
   const handleSend = async () => {
     if (!text && !file) return;
     try {
+      let attachmentUrl = null;
+      if (file) {
+        const fileRef = storageRef(storage, `requests/${reqId}/${Date.now()}`);
+        await uploadString(fileRef, file, 'data_url');
+        attachmentUrl = await getDownloadURL(fileRef);
+      }
       await addDoc(
         collection(db, "requests", reqId, "messages"),
         {
           sender: auth.currentUser.uid,
           text,
-          attachment: file,
+          attachment: attachmentUrl,
           timestamp: Date.now(),
         }
       );
     } catch (err) {
       console.error("Error sending chat message:", err);
       alert("Error enviando mensaje: " + err.message);
+      // clear inputs even on error
+      setText("");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+    // clear inputs after success
     setText("");
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
