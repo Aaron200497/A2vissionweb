@@ -29,6 +29,8 @@ function ChatPopup({ reqId, onClose }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
+  const [fileName, setFileName] = useState("");
+  const [fileLoading, setFileLoading] = useState(false);
   const fileInputRef = useRef(null);
   // Avatares para chat
   const currentAvatar = authUser.avatar || null;
@@ -87,14 +89,21 @@ function ChatPopup({ reqId, onClose }) {
 
   const handleSend = async () => {
     if (!text && !file) return;
+    // Capture current inputs
+    const messageText = text;
+    const fileData = file;
+    // Optimistically clear inputs
+    setText("");
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     try {
       let attachmentUrl = null;
-      if (file) {
+      if (fileData) {
         const fileRef = storageRef(storage, `requests/${reqId}/${Date.now()}`);
-        await uploadString(fileRef, file, 'data_url');
+        await uploadString(fileRef, fileData, 'data_url');
         attachmentUrl = await getDownloadURL(fileRef);
       }
-      // Build full senderName: use name+lastname if present, else email
+      // Send to Firestore
       const nameParts = [];
       if (authUser.name) nameParts.push(authUser.name);
       if (authUser.lastname) nameParts.push(authUser.lastname);
@@ -105,7 +114,7 @@ function ChatPopup({ reqId, onClose }) {
         collection(db, "requests", reqId, "messages"),
         {
           sender: auth.currentUser.uid,
-          text,
+          text: messageText,
           attachment: attachmentUrl,
           timestamp: Date.now(),
           senderName: fullName,
@@ -115,16 +124,7 @@ function ChatPopup({ reqId, onClose }) {
     } catch (err) {
       console.error("Error sending chat message:", err);
       alert("Error enviando mensaje: " + err.message);
-      // clear inputs even on error
-      setText("");
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
     }
-    // clear inputs after success
-    setText("");
-    setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
@@ -215,19 +215,52 @@ function ChatPopup({ reqId, onClose }) {
           onChange={e => {
             const f = e.target.files[0];
             if (f) {
+              setFileLoading(true);
+              setFileName(f.name);
               const reader = new FileReader();
-              reader.onload = ev => setFile(ev.target.result);
+              reader.onload = ev => {
+                setFile(ev.target.result);
+                setFileLoading(false);
+              };
               reader.readAsDataURL(f);
             }
           }}
           className="text-sm"
         />
+        <div className="flex flex-col mt-1">
+          {fileLoading && (
+            <span className="text-xs text-slate-500">Cargando {fileName}...</span>
+          )}
+          {!fileLoading && file && (
+            <div className="flex items-center space-x-2 text-xs">
+              {file.startsWith("data:image") ? (
+                <img
+                  src={file}
+                  alt={fileName}
+                  className="max-w-[4rem] max-h-[4rem] rounded"
+                />
+              ) : (
+                <span className="underline">{fileName}</span>
+              )}
+              <button
+                onClick={() => {
+                  setFile(null);
+                  setFileName("");
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                className="text-red-500"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
         <button
           onClick={handleSend}
           title="Enviar mensaje"
-          className="text-sm bg-sky-600 text-white px-2 py-1 rounded"
+          className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-full font-semibold shadow-lg"
         >
-          ✈️
+          ✈️ Enviar
         </button>
       </div>
     </div>
