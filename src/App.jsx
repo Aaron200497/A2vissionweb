@@ -94,6 +94,13 @@ function ChatPopup({ reqId, onClose }) {
         await uploadString(fileRef, file, 'data_url');
         attachmentUrl = await getDownloadURL(fileRef);
       }
+      // Build full senderName: use name+lastname if present, else email
+      const nameParts = [];
+      if (authUser.name) nameParts.push(authUser.name);
+      if (authUser.lastname) nameParts.push(authUser.lastname);
+      const fullName = nameParts.length > 0
+        ? nameParts.join(" ")
+        : authUser.email;
       await addDoc(
         collection(db, "requests", reqId, "messages"),
         {
@@ -101,7 +108,7 @@ function ChatPopup({ reqId, onClose }) {
           text,
           attachment: attachmentUrl,
           timestamp: Date.now(),
-          senderName: `${authUser.name} ${authUser.lastname}`.trim() || authUser.email,
+          senderName: fullName,
           senderAvatar: currentAvatar,
         }
       );
@@ -156,11 +163,16 @@ function ChatPopup({ reqId, onClose }) {
                   isMe ? 'bg-sky-600 text-white' : 'bg-gray-200 text-black'
                 }`}
               >
-                <div className={`text-xs font-semibold mb-1 ${isMe ? 'text-white' : 'text-gray-700'}`}>
-                  {isMe
-                    ? 'Tú'
-                    : (userMeta[m.sender] || m.senderName || 'Usuario')}
-                </div>
+               <div className={`text-xs font-semibold mb-1 ${isMe ? 'text-white' : 'text-gray-700'}`}>
+  {isMe
+    ? 'Tú'
+    : (
+        // Si el mensaje viene del email admin, mostramos “Equipo A² Vission”
+        m.senderName === 'website@a2vission.com'
+          ? 'Equipo A² Vission'
+          : (userMeta[m.sender] || m.senderName || 'Usuario')
+      )}
+</div>
                 {m.text}
               </div>
               { isMe && (
