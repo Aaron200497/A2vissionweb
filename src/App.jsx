@@ -154,7 +154,14 @@ function ChatPopup({ reqId, onClose }) {
                 <div className={`text-xs font-semibold mb-1 ${isMe ? 'text-white' : 'text-gray-700'}`}>
                   {isMe
                     ? 'Tú'
-                    : (m.senderName || userMeta[m.sender] || 'Usuario')}
+                    : (
+                        userMeta[m.sender]
+                          ? userMeta[m.sender]
+                          : (m.senderName === 'website@a2vission.com'
+                              ? 'Equipo A² Vission'
+                              : 'Usuario'
+                            )
+                      )}
                 </div>
                 {m.text}
               </div>
